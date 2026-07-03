@@ -81,20 +81,26 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Finance Dashboard — Controle financeiro pessoal premium" },
+      { title: "Dashboard — Finance Dashboard" },
       {
         name: "description",
         content:
           "Dashboard financeiro pessoal moderno para acompanhar receitas, despesas, metas e patrimônio com uma experiência premium.",
       },
       { name: "author", content: "Finance Dashboard" },
-      { property: "og:title", content: "Finance Dashboard" },
+      { property: "og:title", content: "Dashboard — Finance Dashboard" },
       {
         property: "og:description",
         content: "Controle financeiro pessoal moderno, elegante e responsivo.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "Dashboard — Finance Dashboard" },
+      { name: "description", content: "Visão geral das suas finanças pessoais: saldo, receitas, despesas e metas." },
+      { property: "og:description", content: "Visão geral das suas finanças pessoais: saldo, receitas, despesas e metas." },
+      { name: "twitter:description", content: "Visão geral das suas finanças pessoais: saldo, receitas, despesas e metas." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/055e6bec-df3e-4304-94f9-a484d1dff50c/id-preview-914ea419--5412ca1e-18e6-4795-ae99-830336bf7c12.lovable.app-1783082107035.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/055e6bec-df3e-4304-94f9-a484d1dff50c/id-preview-914ea419--5412ca1e-18e6-4795-ae99-830336bf7c12.lovable.app-1783082107035.png" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
