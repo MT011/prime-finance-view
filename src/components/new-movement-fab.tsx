@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus } from "lucide-react";
+import { Plus, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -20,12 +20,69 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { categoriesList, accounts } from "@/lib/mock-data";
+import { accounts } from "@/lib/mock-data";
+import { getStoredCategories } from "@/lib/categories-storage";
 import { toast } from "sonner";
+import { useAddMovement } from "@/hooks/queries";
 
 export function NewMovementFab() {
   const [open, setOpen] = useState(false);
   const [type, setType] = useState<"receita" | "despesa">("despesa");
+  const [amount, setAmount] = useState("");
+  const [category, setCategory] = useState("");
+  const [account, setAccount] = useState("");
+  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
+  const [description, setDescription] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const addMovementMutation = useAddMovement();
+  const storedCategories = getStoredCategories();
+  const availableCategories = type === "receita" ? storedCategories.receitas : storedCategories.despesas;
+
+  const handleSave = async () => {
+    const numAmount = parseFloat(amount.replace(",", "."));
+    if (isNaN(numAmount) || numAmount <= 0) {
+      toast.error("Por favor, digite um valor válido maior que zero.");
+      return;
+    }
+    if (!category) {
+      toast.error("Por favor, selecione uma categoria.");
+      return;
+    }
+    if (!account) {
+      toast.error("Por favor, selecione uma conta.");
+      return;
+    }
+    if (!date) {
+      toast.error("Por favor, selecione uma data.");
+      return;
+    }
+    setSaving(true);
+    try {
+      await addMovementMutation.mutateAsync({
+        date,
+        description: description.trim(),
+        category,
+        account,
+        type,
+        amount: numAmount,
+      });
+
+      toast.success("Movimentação salva com sucesso!");
+      // Reset form
+      setAmount("");
+      setCategory("");
+      setAccount("");
+      setDate(new Date().toISOString().split("T")[0]);
+      setDescription("");
+      setOpen(false);
+    } catch (error: any) {
+      console.error(error);
+      toast.error(error.message || "Erro ao salvar movimentação.");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -44,17 +101,20 @@ export function NewMovementFab() {
         </DialogHeader>
 
         <div className="space-y-4 py-2">
-          <Tabs value={type} onValueChange={(v) => setType(v as "receita" | "despesa")}>
+          <Tabs value={type} onValueChange={(v) => {
+            setType(v as "receita" | "despesa");
+            setCategory(""); // Reset category when type changes
+          }}>
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger
                 value="receita"
-                className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary"
+                className="data-[state=active]:bg-primary/25 data-[state=active]:text-primary"
               >
                 Receita
               </TabsTrigger>
               <TabsTrigger
                 value="despesa"
-                className="data-[state=active]:bg-destructive/20 data-[state=active]:text-destructive"
+                className="data-[state=active]:bg-destructive/25 data-[state=active]:text-destructive"
               >
                 Despesa
               </TabsTrigger>
@@ -63,30 +123,34 @@ export function NewMovementFab() {
 
           <div className="space-y-2">
             <Label>Valor</Label>
-            <Input placeholder="R$ 0,00" inputMode="decimal" />
+            <Input 
+              placeholder="R$ 0,00" 
+              inputMode="decimal" 
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              disabled={saving}
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label>Categoria</Label>
-              <Select>
+              <Select value={category} onValueChange={setCategory} disabled={saving}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione" />
                 </SelectTrigger>
                 <SelectContent>
-                  {(type === "receita" ? categoriesList.receitas : categoriesList.despesas).map(
-                    (c) => (
-                      <SelectItem key={c} value={c}>
-                        {c}
-                      </SelectItem>
-                    ),
-                  )}
+                  {availableCategories.map((c) => (
+                    <SelectItem key={c} value={c}>
+                      {c}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
               <Label>Conta</Label>
-              <Select>
+              <Select value={account} onValueChange={setAccount} disabled={saving}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione" />
                 </SelectTrigger>
@@ -103,26 +167,38 @@ export function NewMovementFab() {
 
           <div className="space-y-2">
             <Label>Data</Label>
-            <Input type="date" defaultValue="2025-08-04" />
+            <Input 
+              type="date" 
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              disabled={saving}
+            />
           </div>
 
           <div className="space-y-2">
             <Label>Descrição</Label>
-            <Textarea rows={3} placeholder="Descreva a movimentação" />
+            <Textarea 
+              rows={3} 
+              placeholder="Descreva a movimentação" 
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              disabled={saving}
+            />
           </div>
         </div>
 
         <DialogFooter className="gap-2 sm:gap-2">
-          <Button variant="outline" onClick={() => setOpen(false)}>
+          <Button variant="outline" onClick={() => setOpen(false)} disabled={saving}>
             Cancelar
           </Button>
-          <Button
-            onClick={() => {
-              toast.success("Movimentação salva (demo)");
-              setOpen(false);
-            }}
-          >
-            Salvar
+          <Button onClick={handleSave} disabled={saving}>
+            {saving ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Salvando
+              </>
+            ) : (
+              "Salvar"
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

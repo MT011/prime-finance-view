@@ -38,7 +38,9 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { categoriesData, monthlyEvolution, movements } from "@/lib/mock-data";
+import { useMovements, useGoals, useEmergencySavings } from "@/hooks/queries";
+import { Loader2 } from "lucide-react";
+import { useMemo } from "react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -161,15 +163,158 @@ function ChartTooltip({ active, payload, label }: any) {
 function DashboardPage() {
   const { hidden, toggle, format } = useValueVisibility();
 
-  const patrimonio = 145820;
-  const receitasMes = 8500;
-  const despesasMes = 5200;
-  const economia = 3300;
-  const metaEconomia = 4000;
-  const reservaAtual = 12450;
-  const reservaMeta = 30000;
-  const metaGuardar = 2000;
-  const guardadoMes = 1640;
+  const { data: movements = [], isLoading: isLoadingMovements } = useMovements();
+  const { data: goals = [], isLoading: isLoadingGoals } = useGoals();
+  const { data: emergencySavings = [], isLoading: isLoadingSavings } = useEmergencySavings();
+
+  const {
+    saldoAtual,
+    receitasMes,
+    despesasMes,
+    economia,
+    patrimonio,
+    reservaAtual,
+    reservaMeta,
+    metaGuardar,
+    guardadoMes,
+    receitasPrev,
+    despesasPrev,
+    economiaPrev,
+  } = useMemo(() => {
+    const currentMonth = new Date().getMonth();
+    const currentYear = new Date().getFullYear();
+
+    const prevMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+    const prevMonthYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+
+    let saldo = 0;
+    let recMes = 0;
+    let desMes = 0;
+    let recPrev = 0;
+    let desPrev = 0;
+
+    movements.forEach((m) => {
+      const d = new Date(m.date);
+      const isCurrentMonth = d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+      const isPrevMonth = d.getMonth() === prevMonth && d.getFullYear() === prevMonthYear;
+
+      const amt = Number(m.amount);
+      if (m.type === "receita") {
+        saldo += amt;
+        if (isCurrentMonth) recMes += amt;
+        if (isPrevMonth) recPrev += amt;
+      } else {
+        saldo -= amt;
+        if (isCurrentMonth) desMes += amt;
+        if (isPrevMonth) desPrev += amt;
+      }
+    });
+
+    const eco = recMes - desMes;
+    const ecoPrev = recPrev - desPrev;
+
+    const lastEmergencyValue = emergencySavings.length > 0 ? Number(emergencySavings[emergencySavings.length - 1].value) : 0;
+    
+    const emergencyGoal = goals.find(g => g.title.toLowerCase().includes("reserva") || g.title.toLowerCase().includes("emergência")) || { current: 0, target: 30000 };
+    const pat = saldo + (lastEmergencyValue || Number(emergencyGoal.current));
+
+    const monthlyGoal = goals.find(g => g.title.toLowerCase().includes("economia") || g.title.toLowerCase().includes("mensal")) || { current: 0, target: 2000 };
+
+    return {
+      saldoAtual: saldo,
+      receitasMes: recMes,
+      despesasMes: desMes,
+      economia: eco,
+      patrimonio: pat,
+      reservaAtual: lastEmergencyValue || Number(emergencyGoal.current),
+      reservaMeta: Number(emergencyGoal.target),
+      metaGuardar: Number(monthlyGoal.target),
+      guardadoMes: eco > 0 ? eco : 0,
+      receitasPrev: recPrev,
+      despesasPrev: desPrev,
+      economiaPrev: ecoPrev,
+    };
+  }, [movements, goals, emergencySavings]);
+
+  const monthlyEvolution = useMemo(() => {
+    const monthsMap: Record<string, { receitas: number; despesas: number; saldo: number }> = {};
+    const monthsShort = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+    const currentYear = new Date().getFullYear();
+
+    for (let i = 0; i < 12; i++) {
+      monthsMap[monthsShort[i]] = { receitas: 0, despesas: 0, saldo: 0 };
+    }
+
+    const sortedMovements = [...movements].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    let runningBalance = 0;
+    sortedMovements.forEach((m) => {
+      const d = new Date(m.date);
+      if (d.getFullYear() === currentYear) {
+        const monthName = monthsShort[d.getMonth()];
+        const amt = Number(m.amount);
+        if (m.type === "receita") {
+          monthsMap[monthName].receitas += amt;
+        } else {
+          monthsMap[monthName].despesas += amt;
+        }
+      }
+    });
+
+    return monthsShort.map((month) => {
+      const data = monthsMap[month];
+      runningBalance += (data.receitas - data.despesas);
+      return {
+        month,
+        receitas: data.receitas,
+        despesas: data.despesas,
+        saldo: runningBalance,
+      };
+    });
+  }, [movements]);
+
+  const categoriesData = useMemo(() => {
+    const catMap: Record<string, number> = {};
+    const currentMonth = new Date().getMonth();
+    const currentYear = new Date().getFullYear();
+
+    movements.forEach((m) => {
+      const d = new Date(m.date);
+      if (m.type === "despesa" && d.getMonth() === currentMonth && d.getFullYear() === currentYear) {
+        catMap[m.category] = (catMap[m.category] || 0) + Number(m.amount);
+      }
+    });
+
+    const colorPalette = [
+      "oklch(0.78 0.17 150)",
+      "oklch(0.72 0.13 240)",
+      "oklch(0.82 0.16 80)",
+      "oklch(0.65 0.22 25)",
+      "oklch(0.7 0.18 300)",
+      "oklch(0.85 0.14 40)",
+      "oklch(0.6 0.15 200)",
+      "oklch(0.75 0.14 120)",
+      "oklch(0.68 0.16 170)",
+      "oklch(0.5 0.02 260)",
+    ];
+
+    return Object.entries(catMap).map(([name, value], i) => ({
+      name,
+      value,
+      color: colorPalette[i % colorPalette.length],
+    }));
+  }, [movements]);
+
+  if (isLoadingMovements || isLoadingGoals || isLoadingSavings) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-2">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <span className="text-sm text-muted-foreground">Carregando painel financeiro...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -180,7 +325,7 @@ function DashboardPage() {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <StatCard
             label="Saldo Atual"
-            value={format(15820)}
+            value={format(saldoAtual)}
             icon={<Wallet className="h-5 w-5" />}
             accent="info"
             action={
@@ -198,16 +343,12 @@ function DashboardPage() {
           <StatCard
             label="Receitas do mês"
             value={format(receitasMes)}
-            delta="+12%"
-            deltaPositive
             icon={<TrendingUp className="h-5 w-5" />}
             accent="success"
           />
           <StatCard
             label="Despesas do mês"
             value={format(despesasMes)}
-            delta="-8%"
-            deltaPositive
             icon={<TrendingDown className="h-5 w-5" />}
             accent="danger"
           />
@@ -216,7 +357,7 @@ function DashboardPage() {
             value={format(economia)}
             icon={<PiggyBank className="h-5 w-5" />}
             accent="success"
-            progress={Math.round((economia / metaEconomia) * 100)}
+            progress={metaGuardar > 0 ? Math.max(0, Math.round((economia / metaGuardar) * 100)) : 0}
             progressLabel="Meta atingida"
           />
         </div>
@@ -406,11 +547,11 @@ function DashboardPage() {
           </CardHeader>
           <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-3">
             {[
-              { label: "Receita", now: 8500, prev: 7600, positive: true },
-              { label: "Despesa", now: 5200, prev: 5650, positive: true },
-              { label: "Economia", now: 3300, prev: 1950, positive: true },
+              { label: "Receita", now: receitasMes, prev: receitasPrev },
+              { label: "Despesa", now: despesasMes, prev: despesasPrev },
+              { label: "Economia", now: economia, prev: economiaPrev },
             ].map((r) => {
-              const diff = ((r.now - r.prev) / r.prev) * 100;
+              const diff = r.prev === 0 ? (r.now > 0 ? 100 : 0) : ((r.now - r.prev) / r.prev) * 100;
               const up = r.label === "Despesa" ? diff < 0 : diff > 0;
               return (
                 <div

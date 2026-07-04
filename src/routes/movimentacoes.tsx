@@ -21,9 +21,11 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { movements, accounts, categoriesList } from "@/lib/mock-data";
+import { accounts, categoriesList } from "@/lib/mock-data";
 import { useValueVisibility } from "@/lib/value-visibility";
-import { Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Loader2, Trash2 } from "lucide-react";
+import { useMovements, useDeleteMovement } from "@/hooks/queries";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/movimentacoes")({
   head: () => ({
@@ -46,6 +48,20 @@ function MovimentacoesPage() {
   const [type, setType] = useState("all");
   const [page, setPage] = useState(1);
 
+  const { data: movements = [], isLoading } = useMovements();
+  const deleteMovementMutation = useDeleteMovement();
+
+  const handleDelete = async (id: string) => {
+    if (confirm("Tem certeza que deseja excluir esta movimentação?")) {
+      try {
+        await deleteMovementMutation.mutateAsync(id);
+        toast.success("Movimentação excluída com sucesso!");
+      } catch (error: any) {
+        toast.error("Erro ao excluir: " + error.message);
+      }
+    }
+  };
+
   const allCategories = [...categoriesList.receitas, ...categoriesList.despesas];
 
   const filtered = useMemo(() => {
@@ -57,10 +73,24 @@ function MovimentacoesPage() {
       if (type !== "all" && m.type !== type) return false;
       return true;
     });
-  }, [search, month, cat, acc, type]);
+  }, [movements, search, month, cat, acc, type]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const pageData = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen flex-col">
+        <AppHeader title="Movimentações" subtitle="Todas as entradas e saídas" />
+        <main className="flex-1 flex items-center justify-center p-8">
+          <div className="flex flex-col items-center gap-2">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <span className="text-sm text-muted-foreground">Carregando movimentações...</span>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -126,12 +156,13 @@ function MovimentacoesPage() {
                   <TableHead>Conta</TableHead>
                   <TableHead>Tipo</TableHead>
                   <TableHead className="text-right">Valor</TableHead>
+                  <TableHead className="text-right w-[60px]"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {pageData.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={6} className="py-12 text-center text-muted-foreground">
+                    <TableCell colSpan={7} className="py-12 text-center text-muted-foreground">
                       Nenhuma movimentação encontrada.
                     </TableCell>
                   </TableRow>
@@ -163,6 +194,16 @@ function MovimentacoesPage() {
                       }`}
                     >
                       {m.type === "receita" ? "+" : "-"} {format(m.amount)}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => handleDelete(m.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}

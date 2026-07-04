@@ -22,8 +22,7 @@ const weekday = [
 ];
 
 export function AppHeader({ greeting = false, title, subtitle }: Props) {
-  // Fixed date per spec: Segunda-feira, 04 de Agosto de 2025
-  const today = new Date("2025-08-04T12:00:00");
+  const today = new Date();
   const day = today.getDate().toString().padStart(2, "0");
   const monthName = today.toLocaleDateString("pt-BR", { month: "long" });
   const capMonth = monthName.charAt(0).toUpperCase() + monthName.slice(1);
