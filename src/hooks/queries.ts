@@ -12,6 +12,8 @@ export interface Movement {
   account: string;
   type: "receita" | "despesa";
   amount: number;
+  nature?: "credito" | "debito" | "dinheiro" | null;
+  expense_type?: "fixo" | "variavel" | null;
   created_at: string;
 }
 
@@ -76,11 +78,30 @@ export function useAddMovement() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
-      const { data, error } = await supabase
+      const basePayload = {
+        ...movement,
+        user_id: user.id,
+        ...(movement.type === "despesa" && movement.nature ? { nature: movement.nature } : {}),
+        ...(movement.type === "despesa" && movement.expense_type ? { expense_type: movement.expense_type } : {}),
+      };
+
+      let { data, error } = await supabase
         .from("movements")
-        .insert([{ ...movement, user_id: user.id }])
+        .insert([basePayload])
         .select()
         .single();
+
+      if (error && movement.type === "despesa" && (movement.nature || movement.expense_type)) {
+        const fallbackPayload = { ...basePayload };
+        delete fallbackPayload.nature;
+        delete fallbackPayload.expense_type;
+
+        ({ data, error } = await supabase
+          .from("movements")
+          .insert([fallbackPayload])
+          .select()
+          .single());
+      }
 
       if (error) throw error;
       return data;

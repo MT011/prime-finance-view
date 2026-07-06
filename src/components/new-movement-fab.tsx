@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { Plus, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+
+type MovementNature = "credito" | "debito" | "dinheiro";
+type ExpenseType = "fixo" | "variavel";
 import {
   Dialog,
   DialogContent,
@@ -33,6 +36,8 @@ export function NewMovementFab() {
   const [account, setAccount] = useState("");
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [description, setDescription] = useState("");
+  const [nature, setNature] = useState<MovementNature | "">("");
+  const [expenseType, setExpenseType] = useState<ExpenseType | "">("");
   const [saving, setSaving] = useState(false);
 
   const addMovementMutation = useAddMovement();
@@ -57,6 +62,14 @@ export function NewMovementFab() {
       toast.error("Por favor, selecione uma data.");
       return;
     }
+    if (type === "despesa" && !nature) {
+      toast.error("Por favor, selecione a natureza da despesa.");
+      return;
+    }
+    if (type === "despesa" && !expenseType) {
+      toast.error("Por favor, selecione se a despesa é fixa ou variável.");
+      return;
+    }
     setSaving(true);
     try {
       await addMovementMutation.mutateAsync({
@@ -66,6 +79,12 @@ export function NewMovementFab() {
         account,
         type,
         amount: numAmount,
+        ...(type === "despesa"
+          ? {
+              nature: nature as MovementNature,
+              expense_type: expenseType as ExpenseType,
+            }
+          : {}),
       });
 
       toast.success("Movimentação salva com sucesso!");
@@ -75,6 +94,8 @@ export function NewMovementFab() {
       setAccount("");
       setDate(new Date().toISOString().split("T")[0]);
       setDescription("");
+      setNature("");
+      setExpenseType("");
       setOpen(false);
     } catch (error: any) {
       console.error(error);
@@ -103,7 +124,9 @@ export function NewMovementFab() {
         <div className="space-y-4 py-2">
           <Tabs value={type} onValueChange={(v) => {
             setType(v as "receita" | "despesa");
-            setCategory(""); // Reset category when type changes
+            setCategory("");
+            setNature("");
+            setExpenseType("");
           }}>
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger
@@ -174,6 +197,37 @@ export function NewMovementFab() {
               disabled={saving}
             />
           </div>
+
+          {type === "despesa" && (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Natureza da despesa</Label>
+                <Select value={nature} onValueChange={(v) => setNature(v as MovementNature)} disabled={saving}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="credito">Crédito</SelectItem>
+                    <SelectItem value="debito">Débito</SelectItem>
+                    <SelectItem value="dinheiro">Dinheiro</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Tipo da despesa</Label>
+                <Select value={expenseType} onValueChange={(v) => setExpenseType(v as ExpenseType)} disabled={saving}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="fixo">Fixo</SelectItem>
+                    <SelectItem value="variavel">Variável</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label>Descrição</Label>
