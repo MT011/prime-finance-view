@@ -24,6 +24,7 @@ export interface Goal {
   current: number;
   target: number;
   period: string;
+  description?: string | null;
   created_at: string;
 }
 
@@ -163,13 +164,13 @@ export function useGoals() {
 export function useUpdateGoal() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, current, target }: { id: string; current?: number; target?: number }) => {
+    mutationFn: async ({ id, current, target, description }: { id: string; current?: number; target?: number; description?: string | null }) => {
       const storedSession = getStoredSession();
       if (storedSession?.demo) {
         const store = getDemoDataStore();
         const updatedGoals = store.goals.map((goal) =>
           goal.id === id
-            ? { ...goal, ...(current !== undefined ? { current } : {}), ...(target !== undefined ? { target } : {}) }
+            ? { ...goal, ...(current !== undefined ? { current } : {}), ...(target !== undefined ? { target } : {}), ...(description !== undefined ? { description } : {}) }
             : goal,
         );
         saveDemoDataStore({ ...store, goals: updatedGoals });
@@ -179,6 +180,7 @@ export function useUpdateGoal() {
       const updateData: Record<string, any> = {};
       if (current !== undefined) updateData.current = current;
       if (target !== undefined) updateData.target = target;
+      if (description !== undefined) updateData.description = description;
 
       const { data, error } = await supabase
         .from("goals")
@@ -196,7 +198,68 @@ export function useUpdateGoal() {
   });
 }
 
-// 6. Hook para buscar histórico da reserva de emergência
+// 6. Hook para criar nova meta
+export function useCreateGoal() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ title, current, target, period, description }: { title: string; current: number; target: number; period: string; description?: string | null }) => {
+      const storedSession = getStoredSession();
+      if (storedSession?.demo) {
+        const store = getDemoDataStore();
+        const newGoal = {
+          id: crypto.randomUUID(),
+          user_id: "demo-user",
+          title,
+          current,
+          target,
+          period,
+          description,
+          created_at: new Date().toISOString(),
+        } as Goal;
+        saveDemoDataStore({ ...store, goals: [newGoal, ...store.goals] });
+        return newGoal;
+      }
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Usuário não autenticado");
+
+      const { data, error } = await supabase
+        .from("goals")
+        .insert([{ user_id: user.id, title, current, target, period, description }])
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["goals"] });
+    },
+  });
+}
+
+// 7. Hook para excluir meta
+export function useDeleteGoal() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const storedSession = getStoredSession();
+      if (storedSession?.demo) {
+        const store = getDemoDataStore();
+        saveDemoDataStore({ ...store, goals: store.goals.filter((goal) => goal.id !== id) });
+        return;
+      }
+
+      const { error } = await supabase.from("goals").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["goals"] });
+    },
+  });
+}
+
+// 8. Hook para buscar histórico da reserva de emergência
 export function useEmergencySavings() {
   return useQuery<EmergencySaving[]>({
     queryKey: ["emergency_savings"],

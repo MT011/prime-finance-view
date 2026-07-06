@@ -67,6 +67,7 @@ create table public.goals (
   current numeric not null default 0,
   target numeric not null,
   period text not null,
+  description text,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 

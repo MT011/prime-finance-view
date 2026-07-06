@@ -188,16 +188,6 @@ export function NewMovementFab() {
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label>Data</Label>
-            <Input 
-              type="date" 
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              disabled={saving}
-            />
-          </div>
-
           {type === "despesa" && (
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="space-y-2">
@@ -228,6 +218,16 @@ export function NewMovementFab() {
               </div>
             </div>
           )}
+
+          <div className="space-y-2">
+            <Label>Data</Label>
+            <Input 
+              type="date" 
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              disabled={saving}
+            />
+          </div>
 
           <div className="space-y-2">
             <Label>Descrição</Label>

@@ -180,6 +180,8 @@ function DashboardPage() {
     receitasPrev,
     despesasPrev,
     economiaPrev,
+    hasEconomyGoal,
+    hasEmergencyGoal,
   } = useMemo(() => {
     const currentMonth = new Date().getMonth();
     const currentYear = new Date().getFullYear();
@@ -214,11 +216,17 @@ function DashboardPage() {
     const ecoPrev = recPrev - desPrev;
 
     const lastEmergencyValue = emergencySavings.length > 0 ? Number(emergencySavings[emergencySavings.length - 1].value) : 0;
-    
-    const emergencyGoal = goals.find(g => g.title.toLowerCase().includes("reserva") || g.title.toLowerCase().includes("emergência")) || { current: 0, target: 30000 };
-    const pat = saldo + (lastEmergencyValue || Number(emergencyGoal.current));
 
-    const monthlyGoal = goals.find(g => g.title.toLowerCase().includes("economia") || g.title.toLowerCase().includes("mensal")) || { current: 0, target: 2000 };
+    const emergencyGoal = goals.find((g) => {
+      const title = (g.title || "").toLowerCase();
+      return title.includes("reserva") || title.includes("emergência");
+    });
+    const monthlyGoal = goals.find((g) => {
+      const title = (g.title || "").toLowerCase();
+      return title.includes("economia") || title.includes("mensal") || title.includes("meta");
+    });
+
+    const pat = saldo + (lastEmergencyValue || Number(emergencyGoal?.current || 0));
 
     return {
       saldoAtual: saldo,
@@ -226,13 +234,15 @@ function DashboardPage() {
       despesasMes: desMes,
       economia: eco,
       patrimonio: pat,
-      reservaAtual: lastEmergencyValue || Number(emergencyGoal.current),
-      reservaMeta: Number(emergencyGoal.target),
-      metaGuardar: Number(monthlyGoal.target),
+      reservaAtual: lastEmergencyValue || Number(emergencyGoal?.current || 0),
+      reservaMeta: Number(emergencyGoal?.target || 0),
+      metaGuardar: monthlyGoal ? Number(monthlyGoal.target) : 0,
       guardadoMes: eco > 0 ? eco : 0,
       receitasPrev: recPrev,
       despesasPrev: desPrev,
       economiaPrev: ecoPrev,
+      hasEconomyGoal: Boolean(monthlyGoal),
+      hasEmergencyGoal: Boolean(emergencyGoal),
     };
   }, [movements, goals, emergencySavings]);
 
@@ -447,60 +457,64 @@ function DashboardPage() {
         </div>
 
         {/* Row 3: Goals */}
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-          <Card className="glass-card card-hover">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base">Meta de Economia</CardTitle>
-                <Badge variant="secondary" className="bg-primary/15 text-primary">
-                  {Math.round((guardadoMes / metaGuardar) * 100)}%
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex items-end justify-between">
-                <div>
-                  <p className="text-xs text-muted-foreground">Atual</p>
-                  <p className="text-2xl font-bold">{format(guardadoMes)}</p>
+        <div className={`grid grid-cols-1 gap-4 ${hasEconomyGoal || hasEmergencyGoal ? "lg:grid-cols-3" : "lg:grid-cols-1"}`}>
+          {hasEconomyGoal && (
+            <Card className="glass-card card-hover">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base">Meta de Economia</CardTitle>
+                  <Badge variant="secondary" className="bg-primary/15 text-primary">
+                    {metaGuardar > 0 ? `${Math.max(0, Math.min(100, Math.round((guardadoMes / metaGuardar) * 100)))}%` : "0%"}
+                  </Badge>
                 </div>
-                <div className="text-right">
-                  <p className="text-xs text-muted-foreground">Meta</p>
-                  <p className="text-sm font-medium">{format(metaGuardar)}</p>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-end justify-between">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Atual</p>
+                    <p className="text-2xl font-bold">{format(guardadoMes)}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-muted-foreground">Meta</p>
+                    <p className="text-sm font-medium">{format(metaGuardar)}</p>
+                  </div>
                 </div>
-              </div>
-              <Progress value={(guardadoMes / metaGuardar) * 100} className="h-2" />
-              <p className="text-xs text-muted-foreground">
-                Faltam {format(metaGuardar - guardadoMes)} para atingir sua meta mensal.
-              </p>
-            </CardContent>
-          </Card>
+                <Progress value={metaGuardar > 0 ? (guardadoMes / metaGuardar) * 100 : 0} className="h-2" />
+                <p className="text-xs text-muted-foreground">
+                  Faltam {format(Math.max(0, metaGuardar - guardadoMes))} para atingir sua meta mensal.
+                </p>
+              </CardContent>
+            </Card>
+          )}
 
-          <Card className="glass-card card-hover">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base">Reserva de Emergência</CardTitle>
-                <Badge variant="secondary" className="bg-info/15 text-info">
-                  {Math.round((reservaAtual / reservaMeta) * 100)}%
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex items-end justify-between">
-                <div>
-                  <p className="text-xs text-muted-foreground">Atual</p>
-                  <p className="text-2xl font-bold">{format(reservaAtual)}</p>
+          {hasEmergencyGoal && (
+            <Card className="glass-card card-hover">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base">Reserva de Emergência</CardTitle>
+                  <Badge variant="secondary" className="bg-info/15 text-info">
+                    {reservaMeta > 0 ? `${Math.max(0, Math.min(100, Math.round((reservaAtual / reservaMeta) * 100)))}%` : "0%"}
+                  </Badge>
                 </div>
-                <div className="text-right">
-                  <p className="text-xs text-muted-foreground">Meta</p>
-                  <p className="text-sm font-medium">{format(reservaMeta)}</p>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-end justify-between">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Atual</p>
+                    <p className="text-2xl font-bold">{format(reservaAtual)}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-muted-foreground">Meta</p>
+                    <p className="text-sm font-medium">{format(reservaMeta)}</p>
+                  </div>
                 </div>
-              </div>
-              <Progress value={(reservaAtual / reservaMeta) * 100} className="h-2" />
-              <p className="text-xs text-muted-foreground">
-                Continue guardando ~R$ 1.500/mês para atingir em ~12 meses.
-              </p>
-            </CardContent>
-          </Card>
+                <Progress value={reservaMeta > 0 ? (reservaAtual / reservaMeta) * 100 : 0} className="h-2" />
+                <p className="text-xs text-muted-foreground">
+                  Continue guardando ~R$ 1.500/mês para atingir em ~12 meses.
+                </p>
+              </CardContent>
+            </Card>
+          )}
 
           <Card className="glass-card card-hover">
             <CardHeader>
