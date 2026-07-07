@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Plus, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useCreditCards } from "@/hooks/queries";
-import { getCreditCardInvoiceInfo } from "@/lib/credit-cards";
+import { useCreditCards, useAddMovement } from "@/hooks/queries";
+import { getCreditCardInvoiceInfo, getInstallmentInvoiceInfos } from "@/lib/credit-cards";
 
 type MovementNature = "credito" | "debito" | "pix";
 type ExpenseType = "fixo" | "variavel";
@@ -28,7 +28,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { accounts } from "@/lib/mock-data";
 import { getStoredCategories } from "@/lib/categories-storage";
 import { toast } from "sonner";
-import { useAddMovement } from "@/hooks/queries";
 
 export function NewMovementFab() {
   const [open, setOpen] = useState(false);
@@ -41,6 +40,7 @@ export function NewMovementFab() {
   const [nature, setNature] = useState<MovementNature | "">("");
   const [expenseType, setExpenseType] = useState<ExpenseType | "">("");
   const [cardId, setCardId] = useState("");
+  const [installments, setInstallments] = useState("1");
   const [saving, setSaving] = useState(false);
 
   const addMovementMutation = useAddMovement();
@@ -77,26 +77,59 @@ export function NewMovementFab() {
     setSaving(true);
     try {
       const selectedCard = creditCards.find((card) => card.id === cardId);
-      const invoiceInfo = selectedCard ? getCreditCardInvoiceInfo(date, selectedCard) : null;
+      const numInstallments = parseInt(installments) || 1;
+      const installmentGroupId = crypto.randomUUID();
 
-      await addMovementMutation.mutateAsync({
-        date,
-        description: description.trim(),
-        category,
-        account,
-        type,
-        amount: numAmount,
-        ...(type === "despesa"
-          ? {
-              nature: nature as MovementNature,
-              expense_type: expenseType as ExpenseType,
-              card_id: selectedCard?.id || null,
-              invoice_month: invoiceInfo?.monthKey || null,
-            }
-          : {}),
-      });
+      if (type === "despesa" && nature === "credito" && selectedCard && numInstallments > 1) {
+        const installmentInfos = getInstallmentInvoiceInfos(date, selectedCard, numInstallments);
+        const installmentAmount = numAmount / numInstallments;
+        const desc = description.trim();
 
-      toast.success("Movimentação salva com sucesso!");
+        const movements = installmentInfos.map((info, i) => {
+          const installmentDate = new Date(info.monthKey + "-01");
+          const dateStr = installmentDate.toISOString().split("T")[0];
+          return {
+            date: dateStr,
+            description: `${desc} (${i + 1}/${numInstallments})`,
+            category,
+            account,
+            type: "despesa" as const,
+            amount: installmentAmount,
+            nature: "credito" as MovementNature,
+            expense_type: expenseType as ExpenseType,
+            card_id: selectedCard.id,
+            invoice_month: info.monthKey,
+            installment_group_id: installmentGroupId,
+            installment_number: i + 1,
+            total_installments: numInstallments,
+          };
+        });
+
+        await addMovementMutation.mutateAsync(movements as any);
+        toast.success(`Compra parcelada em ${numInstallments}x salva com sucesso!`);
+      } else {
+        const invoiceInfo = selectedCard ? getCreditCardInvoiceInfo(date, selectedCard) : null;
+
+        await addMovementMutation.mutateAsync({
+          date,
+          description: description.trim(),
+          category,
+          account,
+          type,
+          amount: numAmount,
+          ...(type === "despesa"
+            ? {
+                nature: nature as MovementNature,
+                expense_type: expenseType as ExpenseType,
+                card_id: selectedCard?.id || null,
+                invoice_month: invoiceInfo?.monthKey || null,
+              }
+            : {}),
+        });
+
+        toast.success("Movimentação salva com sucesso!");
+      }
+
       // Reset form
       setAmount("");
       setCategory("");
@@ -106,6 +139,7 @@ export function NewMovementFab() {
       setNature("");
       setExpenseType("");
       setCardId("");
+      setInstallments("1");
       setOpen(false);
     } catch (error: any) {
       console.error(error);
@@ -137,6 +171,7 @@ export function NewMovementFab() {
             setCategory("");
             setNature("");
             setExpenseType("");
+            setInstallments("1");
           }}>
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger
@@ -248,6 +283,23 @@ export function NewMovementFab() {
                 <p className="text-xs text-muted-foreground">
                   {getCreditCardInvoiceInfo(date, creditCards.find((card) => card.id === cardId))?.label} · vence {getCreditCardInvoiceInfo(date, creditCards.find((card) => card.id === cardId))?.dueDate}
                 </p>
+              )}
+              {cardId && nature === "credito" && (
+                <div className="space-y-2 pt-2">
+                  <Label>Parcelas</Label>
+                  <Select value={installments} onValueChange={setInstallments} disabled={saving}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="1x" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Array.from({ length: 24 }, (_, i) => i + 1).map((n) => (
+                        <SelectItem key={n} value={String(n)}>
+                          {n}x {n > 1 ? `- ${(parseFloat(amount.replace(",", ".")) / n).toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 2 })}` : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               )}
             </div>
           )}

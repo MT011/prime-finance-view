@@ -1,10 +1,11 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { AppHeader } from "@/components/app-header";
 import { NewMovementFab } from "@/components/new-movement-fab";
 import { useValueVisibility } from "@/lib/value-visibility";
 import {
   ArrowDownRight,
   ArrowUpRight,
+  CreditCard,
   Eye,
   EyeOff,
   PiggyBank,
@@ -38,9 +39,10 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { useMovements, useGoals, useEmergencySavings } from "@/hooks/queries";
+import { useMovements, useGoals, useEmergencySavings, useCreditCards } from "@/hooks/queries";
 import { Loader2 } from "lucide-react";
 import { useMemo } from "react";
+import { getCurrentInvoiceMonthKey, getNextInvoiceMonthKey, getInvoiceMonthLabel } from "@/lib/credit-cards";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -162,10 +164,12 @@ function ChartTooltip({ active, payload, label }: any) {
 
 function DashboardPage() {
   const { hidden, toggle, format } = useValueVisibility();
+  const navigate = useNavigate();
 
   const { data: movements = [], isLoading: isLoadingMovements } = useMovements();
   const { data: goals = [], isLoading: isLoadingGoals } = useGoals();
   const { data: emergencySavings = [], isLoading: isLoadingSavings } = useEmergencySavings();
+  const { data: creditCards = [] } = useCreditCards();
 
   const {
     saldoAtual,
@@ -254,6 +258,26 @@ function DashboardPage() {
       dashboardGoals: sortedGoals,
     };
   }, [movements, goals, emergencySavings]);
+
+  const cardSummaries = useMemo(() => {
+    return creditCards.map((card) => {
+      const currentMonthKey = getCurrentInvoiceMonthKey(card);
+      const nextMonthKey = getNextInvoiceMonthKey(card);
+      const currentTotal = movements
+        .filter((m) => m.card_id === card.id && m.invoice_month === currentMonthKey)
+        .reduce((sum, m) => sum + Number(m.amount), 0);
+      const nextTotal = movements
+        .filter((m) => m.card_id === card.id && m.invoice_month === nextMonthKey)
+        .reduce((sum, m) => sum + Number(m.amount), 0);
+      const limit = Number(card.limit);
+      return {
+        ...card,
+        currentTotal,
+        nextTotal,
+        usedPercent: limit > 0 ? Math.min(100, (currentTotal / limit) * 100) : 0,
+      };
+    });
+  }, [creditCards, movements]);
 
   const monthlyEvolution = useMemo(() => {
     const monthsMap: Record<string, { receitas: number; despesas: number; despesas_imediatas: number }> = {};
@@ -589,6 +613,63 @@ function DashboardPage() {
             })}
           </CardContent>
         </Card>
+
+        {/* Resumo dos Cartões de Crédito */}
+        {cardSummaries.length > 0 && (
+          <Card className="glass-card">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-base">Resumo dos Cartões de Crédito</CardTitle>
+                <p className="text-xs text-muted-foreground">Faturas atuais e próximas</p>
+              </div>
+              <Badge variant="outline">{cardSummaries.length} cartão{cardSummaries.length > 1 ? "ões" : ""}</Badge>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {cardSummaries.map((card) => (
+                  <button
+                    key={card.id}
+                    onClick={() => navigate({ to: "/movimentacoes", search: { card: card.id, tab: "atual" } })}
+                    className="group relative overflow-hidden rounded-xl border border-border/60 bg-gradient-to-br from-background/80 to-accent/20 p-5 text-left transition-all hover:border-primary/40 hover:shadow-lg hover:shadow-primary/10 active:scale-[0.98]"
+                  >
+                    <div className="mb-3 flex items-center gap-3">
+                      <div className="grid h-10 w-10 place-items-center rounded-lg bg-primary/15 text-primary">
+                        <CreditCard className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <p className="font-semibold">{card.name}</p>
+                        <p className="text-xs text-muted-foreground">Vencimento dia {card.due_day}</p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <p className="text-xs text-muted-foreground">Fatura Atual</p>
+                        <p className="text-lg font-bold">{format(card.currentTotal)}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Próxima Fatura</p>
+                        <p className="text-lg font-bold">{format(card.nextTotal)}</p>
+                      </div>
+                    </div>
+                    <div className="mt-3">
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <span>Limite utilizado</span>
+                        <span>{Math.round(card.usedPercent)}%</span>
+                      </div>
+                      <div className="mt-1 h-2 overflow-hidden rounded-full bg-muted">
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-primary to-primary/60 transition-all"
+                          style={{ width: `${card.usedPercent}%` }}
+                        />
+                      </div>
+                    </div>
+                    <div className="absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-primary/0 via-primary/50 to-primary/0 opacity-0 transition-opacity group-hover:opacity-100" />
+                  </button>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Fluxo Financeiro */}
         <Card className="glass-card">

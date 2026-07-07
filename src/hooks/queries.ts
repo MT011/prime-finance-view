@@ -16,6 +16,9 @@ export interface Movement {
   expense_type?: "fixo" | "variavel" | null;
   card_id?: string | null;
   invoice_month?: string | null;
+  installment_group_id?: string | null;
+  installment_number?: number | null;
+  total_installments?: number | null;
   created_at: string;
 }
 
@@ -83,57 +86,61 @@ export function useMovements() {
   });
 }
 
-// 2. Hook para adicionar nova movimentação
+// 2. Hook para adicionar nova movimentação (suporta parcelamento)
 export function useAddMovement() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (movement: Omit<Movement, "id" | "user_id" | "created_at">) => {
+    mutationFn: async (
+      movement: Omit<Movement, "id" | "user_id" | "created_at"> | Omit<Movement, "id" | "user_id" | "created_at">[],
+    ) => {
+      const items = Array.isArray(movement) ? movement : [movement];
       const storedSession = getStoredSession();
+
       if (storedSession?.demo) {
         const store = getDemoDataStore();
-        const newMovement = {
+        const newMovements = items.map((m) => ({
           id: crypto.randomUUID(),
           user_id: "demo-user",
           created_at: new Date().toISOString(),
-          ...movement,
-        } as Movement;
-        const updatedMovements = [newMovement, ...store.movements];
-        saveDemoDataStore({ ...store, movements: updatedMovements });
-        return newMovement;
+          ...m,
+        })) as Movement[];
+        saveDemoDataStore({ ...store, movements: [...newMovements, ...store.movements] });
+        return items.length === 1 ? newMovements[0] : newMovements;
       }
 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
-      const basePayload = {
-        ...movement,
+      const payloads = items.map((m) => ({
+        ...m,
         user_id: user.id,
-        ...(movement.type === "despesa" && movement.nature ? { nature: movement.nature } : {}),
-        ...(movement.type === "despesa" && movement.expense_type ? { expense_type: movement.expense_type } : {}),
-        ...(movement.card_id ? { card_id: movement.card_id } : {}),
-        ...(movement.invoice_month ? { invoice_month: movement.invoice_month } : {}),
-      };
+        ...(m.type === "despesa" && m.nature ? { nature: m.nature } : {}),
+        ...(m.type === "despesa" && m.expense_type ? { expense_type: m.expense_type } : {}),
+        ...(m.card_id ? { card_id: m.card_id } : {}),
+        ...(m.invoice_month ? { invoice_month: m.invoice_month } : {}),
+        ...(m.installment_group_id ? { installment_group_id: m.installment_group_id } : {}),
+        ...(m.installment_number ? { installment_number: m.installment_number } : {}),
+        ...(m.total_installments ? { total_installments: m.total_installments } : {}),
+      }));
 
       let { data, error } = await supabase
         .from("movements")
-        .insert([basePayload])
-        .select()
-        .single();
+        .insert(payloads)
+        .select();
 
-      if (error && movement.type === "despesa" && (movement.nature || movement.expense_type)) {
-        const fallbackPayload = { ...basePayload };
-        delete fallbackPayload.nature;
-        delete fallbackPayload.expense_type;
-
+      if (error) {
+        const fallbackPayloads = payloads.map((p) => {
+          const { nature, expense_type, installment_group_id, installment_number, total_installments, ...rest } = p as any;
+          return rest;
+        });
         ({ data, error } = await supabase
           .from("movements")
-          .insert([fallbackPayload])
-          .select()
-          .single());
+          .insert(fallbackPayloads)
+          .select());
       }
 
       if (error) throw error;
-      return data;
+      return items.length === 1 && Array.isArray(data) ? data[0] : data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["movements"] });
@@ -141,25 +148,38 @@ export function useAddMovement() {
   });
 }
 
-// 3. Hook para excluir movimentação
+// 3. Hook para excluir movimentação (suporta parcelas)
 export function useDeleteMovement() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (id: string) => {
+    mutationFn: async (input: string | { id: string; installmentGroupId?: string; deleteAll?: boolean }) => {
       const storedSession = getStoredSession();
+      const id = typeof input === "string" ? input : input.id;
+      const installmentGroupId = typeof input === "string" ? undefined : input.installmentGroupId;
+      const deleteAll = typeof input === "string" ? false : input.deleteAll;
+
       if (storedSession?.demo) {
         const store = getDemoDataStore();
-        const updatedMovements = store.movements.filter((movement) => movement.id !== id);
+        const updatedMovements = deleteAll && installmentGroupId
+          ? store.movements.filter((m: any) => m.installment_group_id !== installmentGroupId)
+          : store.movements.filter((m: any) => m.id !== id);
         saveDemoDataStore({ ...store, movements: updatedMovements });
         return;
       }
 
-      const { error } = await supabase
-        .from("movements")
-        .delete()
-        .eq("id", id);
-
-      if (error) throw error;
+      if (deleteAll && installmentGroupId) {
+        const { error } = await supabase
+          .from("movements")
+          .delete()
+          .eq("installment_group_id", installmentGroupId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("movements")
+          .delete()
+          .eq("id", id);
+        if (error) throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["movements"] });
@@ -167,27 +187,44 @@ export function useDeleteMovement() {
   });
 }
 
-// 3.5 Hook para atualizar movimentação
+// 3.5 Hook para atualizar movimentação (suporta parcelas)
 export function useUpdateMovement() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, ...data }: Partial<Movement> & { id: string }) => {
+    mutationFn: async (
+      input: (Partial<Movement> & { id: string }) | (Partial<Movement> & { id: string; editAllInstallments?: boolean; installmentGroupId?: string }),
+    ) => {
+      const { id, editAllInstallments, installmentGroupId, ...data } = input as any;
       const storedSession = getStoredSession();
+
       if (storedSession?.demo) {
         const store = getDemoDataStore();
-        const updatedMovements = store.movements.map((movement: any) =>
-          movement.id === id ? { ...movement, ...data } : movement,
-        );
+        const updatedMovements = editAllInstallments && installmentGroupId
+          ? store.movements.map((movement: any) =>
+              movement.installment_group_id === installmentGroupId
+                ? { ...movement, ...data }
+                : movement,
+            )
+          : store.movements.map((movement: any) =>
+              movement.id === id ? { ...movement, ...data } : movement,
+            );
         saveDemoDataStore({ ...store, movements: updatedMovements });
         return;
       }
 
-      const { error } = await supabase
-        .from("movements")
-        .update(data)
-        .eq("id", id);
-
-      if (error) throw error;
+      if (editAllInstallments && installmentGroupId) {
+        const { error } = await supabase
+          .from("movements")
+          .update(data)
+          .eq("installment_group_id", installmentGroupId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("movements")
+          .update(data)
+          .eq("id", id);
+        if (error) throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["movements"] });
