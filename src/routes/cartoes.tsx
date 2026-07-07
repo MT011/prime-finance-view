@@ -4,10 +4,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useCreateCreditCard, useCreditCards, useDeleteCreditCard } from "@/hooks/queries";
 import { useState } from "react";
 import { Loader2, Plus, Trash2, CreditCard as CreditCardIcon } from "lucide-react";
 import { toast } from "sonner";
+import { accounts } from "@/lib/mock-data";
 
 export const Route = createFileRoute("/cartoes")({
   head: () => ({
@@ -106,7 +114,18 @@ function CartoesPage() {
           <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
             <div className="space-y-2">
               <Label>Nome do cartão</Label>
-              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex.: Nubank" />
+              <Select value={name} onValueChange={setName}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o banco" />
+                </SelectTrigger>
+                <SelectContent>
+                  {accounts.map((a) => (
+                    <SelectItem key={a} value={a}>
+                      {a}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label>Limite</Label>

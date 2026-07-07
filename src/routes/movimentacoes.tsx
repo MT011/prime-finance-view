@@ -21,9 +21,17 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { accounts, categoriesList } from "@/lib/mock-data";
 import { useValueVisibility } from "@/lib/value-visibility";
-import { Search, ChevronLeft, ChevronRight, Loader2, Trash2 } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Loader2, Trash2, AlertTriangle } from "lucide-react";
 import { useMovements, useDeleteMovement, useCreditCards } from "@/hooks/queries";
 import { toast } from "sonner";
 import { getCreditCardInvoiceInfo } from "@/lib/credit-cards";
@@ -53,14 +61,23 @@ function MovimentacoesPage() {
   const { data: creditCards = [] } = useCreditCards();
   const deleteMovementMutation = useDeleteMovement();
 
-  const handleDelete = async (id: string) => {
-    if (confirm("Tem certeza que deseja excluir esta movimentação?")) {
-      try {
-        await deleteMovementMutation.mutateAsync(id);
-        toast.success("Movimentação excluída com sucesso!");
-      } catch (error: any) {
-        toast.error("Erro ao excluir: " + error.message);
-      }
+  const [movementToDelete, setMovementToDelete] = useState<any>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+
+  const handleDeleteRequest = (movement: any) => {
+    setMovementToDelete(movement);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!movementToDelete?.id) return;
+    try {
+      await deleteMovementMutation.mutateAsync(movementToDelete.id);
+      toast.success("Movimentação excluída com sucesso!");
+      setIsDeleteDialogOpen(false);
+      setMovementToDelete(null);
+    } catch (error: any) {
+      toast.error("Erro ao excluir: " + error.message);
     }
   };
 
@@ -210,7 +227,7 @@ function MovimentacoesPage() {
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                        onClick={() => handleDelete(m.id)}
+                        onClick={() => handleDeleteRequest(m)}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -248,6 +265,36 @@ function MovimentacoesPage() {
             </div>
           </CardContent>
         </Card>
+
+        <Dialog open={isDeleteDialogOpen} onOpenChange={(open) => {
+          setIsDeleteDialogOpen(open);
+          if (!open) setMovementToDelete(null);
+        }}>
+          <DialogContent className="glass-card sm:max-w-md">
+            <DialogHeader>
+              <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10">
+                <AlertTriangle className="h-6 w-6 text-destructive" />
+              </div>
+              <DialogTitle className="text-center">Excluir movimentação</DialogTitle>
+              <DialogDescription className="text-center">
+                Tem certeza que deseja excluir esta movimentação?
+                {movementToDelete && (
+                  <span className="mt-2 block font-medium text-foreground">
+                    {movementToDelete.description}
+                  </span>
+                )}
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="gap-2 sm:gap-0">
+              <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+                Cancelar
+              </Button>
+              <Button variant="destructive" onClick={confirmDelete} disabled={deleteMovementMutation.isPending}>
+                {deleteMovementMutation.isPending ? "Excluindo..." : "Excluir"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </main>
       <NewMovementFab />
     </div>
