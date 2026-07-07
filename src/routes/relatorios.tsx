@@ -37,12 +37,12 @@ function RelatoriosPage() {
 
   // 1. Calcular Evolução Mensal
   const monthlyEvolution = useMemo(() => {
-    const monthsMap: Record<string, { receitas: number; despesas: number; saldo: number }> = {};
+    const monthsMap: Record<string, { receitas: number; despesas: number; despesas_imediatas: number }> = {};
     const monthsShort = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
     const currentYear = new Date().getFullYear();
 
     for (let i = 0; i < 12; i++) {
-      monthsMap[monthsShort[i]] = { receitas: 0, despesas: 0, saldo: 0 };
+      monthsMap[monthsShort[i]] = { receitas: 0, despesas: 0, despesas_imediatas: 0 };
     }
 
     const sortedMovements = [...movements].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
@@ -57,13 +57,16 @@ function RelatoriosPage() {
           monthsMap[monthName].receitas += amt;
         } else {
           monthsMap[monthName].despesas += amt;
+          if (m.nature === "debito" || m.nature === "pix") {
+            monthsMap[monthName].despesas_imediatas += amt;
+          }
         }
       }
     });
 
     return monthsShort.map((month) => {
       const data = monthsMap[month];
-      runningBalance += (data.receitas - data.despesas);
+      runningBalance += (data.receitas - data.despesas_imediatas);
       return {
         month,
         receitas: data.receitas,

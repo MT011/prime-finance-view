@@ -47,7 +47,7 @@ create table public.movements (
   account text not null,
   type text not null check (type in ('receita', 'despesa')),
   amount numeric not null,
-  nature text check (nature in ('credito', 'debito', 'dinheiro')),
+  nature text check (nature in ('credito', 'debito', 'pix')),
   expense_type text check (expense_type in ('fixo', 'variavel')),
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );

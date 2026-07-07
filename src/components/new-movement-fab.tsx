@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useCreditCards } from "@/hooks/queries";
 import { getCreditCardInvoiceInfo } from "@/lib/credit-cards";
 
-type MovementNature = "credito" | "debito" | "dinheiro";
+type MovementNature = "credito" | "debito" | "pix";
 type ExpenseType = "fixo" | "variavel";
 import {
   Dialog,
@@ -209,7 +209,7 @@ export function NewMovementFab() {
                   <SelectContent>
                     <SelectItem value="credito">Crédito</SelectItem>
                     <SelectItem value="debito">Débito</SelectItem>
-                    <SelectItem value="dinheiro">Dinheiro</SelectItem>
+                    <SelectItem value="pix">Pix</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

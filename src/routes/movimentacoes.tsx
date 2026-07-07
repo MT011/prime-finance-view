@@ -139,7 +139,7 @@ function MovimentacoesPage() {
         amount: numAmount,
         ...(editType === "despesa"
           ? {
-              nature: editNature as "credito" | "debito" | "dinheiro",
+              nature: editNature as "credito" | "debito" | "pix",
               expense_type: editExpenseType as "fixo" | "variavel",
               card_id: selectedCard?.id || null,
               invoice_month: invoiceInfo?.monthKey || null,
@@ -477,7 +477,7 @@ function MovimentacoesPage() {
                       <SelectContent>
                         <SelectItem value="credito">Crédito</SelectItem>
                         <SelectItem value="debito">Débito</SelectItem>
-                        <SelectItem value="dinheiro">Dinheiro</SelectItem>
+                        <SelectItem value="pix">Pix</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

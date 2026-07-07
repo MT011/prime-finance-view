@@ -12,7 +12,7 @@ export interface Movement {
   account: string;
   type: "receita" | "despesa";
   amount: number;
-  nature?: "credito" | "debito" | "dinheiro" | null;
+  nature?: "credito" | "debito" | "pix" | null;
   expense_type?: "fixo" | "variavel" | null;
   card_id?: string | null;
   invoice_month?: string | null;
