@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useTheme } from "@/lib/theme-provider";
 import { Download, Upload, KeyRound, Bell, Globe, Palette, Coins } from "lucide-react";
 
 export const Route = createFileRoute("/configuracoes")({
@@ -54,6 +55,8 @@ function Section({
 }
 
 function ConfiguracoesPage() {
+  const { theme, setTheme } = useTheme();
+
   return (
     <div className="flex min-h-screen flex-col">
       <AppHeader title="Configurações" subtitle="Personalize sua experiência" />
@@ -66,12 +69,11 @@ function ConfiguracoesPage() {
           >
             <div className="flex items-center justify-between">
               <Label>Tema</Label>
-              <Select defaultValue="dark">
+              <Select value={theme} onValueChange={(v) => setTheme(v as any)}>
                 <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="dark">Escuro</SelectItem>
                   <SelectItem value="light">Claro</SelectItem>
-                  <SelectItem value="system">Sistema</SelectItem>
                 </SelectContent>
               </Select>
             </div>

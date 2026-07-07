@@ -14,6 +14,7 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { ValueVisibilityProvider } from "@/lib/value-visibility";
+import { ThemeProvider } from "@/lib/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { supabase } from "../lib/supabase";
 import { AuthScreen } from "../components/auth-screen";
@@ -125,11 +126,23 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="pt-BR" className="dark">
+    <html lang="pt-BR">
       <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  var theme = localStorage.getItem("dash-theme") || "dark";
+                  document.documentElement.classList.add(theme);
+                } catch(e) {}
+              })();
+            `,
+          }}
+        />
         <HeadContent />
       </head>
-      <body className="dark">
+      <body>
         {children}
         <Scripts />
       </body>
@@ -188,17 +201,19 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ValueVisibilityProvider>
-        <SidebarProvider>
-          <div className="flex min-h-screen w-full bg-background">
-            <AppSidebar />
-            <SidebarInset className="min-w-0 flex-1 bg-background">
-              <Outlet />
-            </SidebarInset>
-          </div>
-          <Toaster richColors position="top-right" />
-        </SidebarProvider>
-      </ValueVisibilityProvider>
+      <ThemeProvider>
+        <ValueVisibilityProvider>
+          <SidebarProvider>
+            <div className="flex min-h-screen w-full bg-background">
+              <AppSidebar />
+              <SidebarInset className="min-w-0 flex-1 bg-background">
+                <Outlet />
+              </SidebarInset>
+            </div>
+            <Toaster richColors position="top-right" />
+          </SidebarProvider>
+        </ValueVisibilityProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }
