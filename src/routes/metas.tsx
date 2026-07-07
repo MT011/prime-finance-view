@@ -22,6 +22,24 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 
+function getGoalTypeLabel(period?: string) {
+  const normalized = (period || "").toLowerCase();
+
+  if (normalized.includes("anual")) return "Meta anual";
+  if (normalized.includes("patrimônio")) return "Meta de patrimônio";
+  if (normalized.includes("investimento")) return "Meta de investimento";
+  if (normalized.includes("reserva") || normalized.includes("emergência")) return "Reserva de emergência";
+  if (normalized.includes("economia") || normalized.includes("mensal")) return "Meta de economia";
+
+  return "Meta";
+}
+
+function getGoalDisplayTitle(goal: any) {
+  const customTitle = (goal?.title || "").trim();
+  if (customTitle) return customTitle;
+  return getGoalTypeLabel(goal?.period);
+}
+
 export const Route = createFileRoute("/metas")({
   head: () => ({
     meta: [
@@ -44,9 +62,11 @@ function MetasPage() {
   const [title, setTitle] = useState("");
   const [currentVal, setCurrentVal] = useState("");
   const [targetVal, setTargetVal] = useState("");
-  const [period, setPeriod] = useState("Mensal");
+  const [period, setPeriod] = useState("Economia");
   const [description, setDescription] = useState("");
   const [updating, setUpdating] = useState(false);
+  const [goalToDelete, setGoalToDelete] = useState<any>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const suggestedGoals = [
     { title: "Meta mensal", period: "Mensal", target: 2000, current: 0, description: "Estabeleça uma reserva mensal para suas despesas e economia." },
@@ -63,7 +83,7 @@ function MetasPage() {
     setTitle("");
     setCurrentVal("");
     setTargetVal("");
-    setPeriod("Mensal");
+    setPeriod("Economia");
     setDescription("");
     setIsDialogOpen(false);
   };
@@ -73,28 +93,34 @@ function MetasPage() {
     setTitle(template?.title || "");
     setCurrentVal(template ? String(template.current) : "");
     setTargetVal(template ? String(template.target) : "");
-    setPeriod(template?.period || "Mensal");
+    setPeriod(template?.period || "Economia");
     setDescription(template?.description || "");
     setIsDialogOpen(true);
   };
 
   const handleOpenEdit = (g: any) => {
     setSelectedGoal(g);
-    setTitle(g.title);
+    setTitle((g.title || "").trim() && (g.title || "").trim() !== getGoalTypeLabel(g.period) ? g.title : "");
     setCurrentVal(String(g.current));
     setTargetVal(String(g.target));
-    setPeriod(g.period || "Mensal");
+    setPeriod(g.period || "Economia");
     setDescription(g.description || "");
     setIsDialogOpen(true);
   };
 
-  const handleDelete = async (goal: any) => {
-    if (!goal?.id) return;
-    if (!window.confirm(`Deseja excluir a meta "${goal.title}"?`)) return;
+  const handleDeleteRequest = (goal: any) => {
+    setGoalToDelete(goal);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!goalToDelete?.id) return;
 
     try {
-      await deleteGoalMutation.mutateAsync(goal.id);
+      await deleteGoalMutation.mutateAsync(goalToDelete.id);
       toast.success("Meta excluída com sucesso!");
+      setIsDeleteDialogOpen(false);
+      setGoalToDelete(null);
       resetForm();
     } catch (error: any) {
       toast.error("Erro ao excluir meta: " + error.message);
@@ -104,9 +130,9 @@ function MetasPage() {
   const handleSave = async () => {
     const current = parseFloat(currentVal);
     const target = parseFloat(targetVal);
-    const trimmedTitle = title.trim();
-    if (!trimmedTitle || isNaN(current) || isNaN(target) || target <= 0) {
-      toast.error("Preencha o título e valores válidos para salvar a meta.");
+    const resolvedTitle = title.trim() || getGoalTypeLabel(period);
+    if (isNaN(current) || isNaN(target) || target <= 0) {
+      toast.error("Preencha valores válidos para salvar a meta.");
       return;
     }
 
@@ -115,6 +141,7 @@ function MetasPage() {
       if (selectedGoal) {
         await updateGoalMutation.mutateAsync({
           id: selectedGoal.id,
+          title: resolvedTitle,
           current,
           target,
           description: description.trim() || null,
@@ -122,7 +149,7 @@ function MetasPage() {
         toast.success("Meta atualizada com sucesso!");
       } else {
         await createGoalMutation.mutateAsync({
-          title: trimmedTitle,
+          title: resolvedTitle,
           current,
           target,
           period,
@@ -181,7 +208,7 @@ function MetasPage() {
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
           {visibleGoals.map((g: any) => {
             const pct = Math.min(100, Math.round((Number(g.current) / Number(g.target)) * 100));
-            const isTemplate = Boolean(g.description);
+            const displayTitle = getGoalDisplayTitle(g);
             return (
               <Card key={g.id || g.title} className="glass-card card-hover relative group">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -189,7 +216,7 @@ function MetasPage() {
                     <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-primary/15 text-primary">
                       <Target className="h-4 w-4" />
                     </span>
-                    <CardTitle className="text-sm truncate">{g.title}</CardTitle>
+                    <CardTitle className="text-sm truncate">{displayTitle}</CardTitle>
                   </div>
                   <Badge variant="secondary" className="bg-primary/15 text-primary shrink-0">
                     {pct}%
@@ -223,7 +250,7 @@ function MetasPage() {
                         variant="ghost"
                         size="sm"
                         className="h-8 px-2 text-xs text-destructive hover:text-destructive"
-                        onClick={() => handleDelete(g)}
+                        onClick={() => handleDeleteRequest(g)}
                       >
                         Excluir
                       </Button>
@@ -236,12 +263,34 @@ function MetasPage() {
         </div>
       </main>
 
+      <Dialog open={isDeleteDialogOpen} onOpenChange={(open) => {
+        setIsDeleteDialogOpen(open);
+        if (!open) setGoalToDelete(null);
+      }}>
+        <DialogContent className="glass-card sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Excluir meta</DialogTitle>
+            <DialogDescription>
+              Tem certeza que deseja excluir a meta {goalToDelete ? `"${getGoalDisplayTitle(goalToDelete)}"` : "selecionada"}?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button variant="destructive" onClick={confirmDelete} disabled={deleteGoalMutation.isPending}>
+              {deleteGoalMutation.isPending ? "Excluindo..." : "Excluir"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!open) resetForm(); }}>
         <DialogContent className="glass-card sm:max-w-md">
           <DialogHeader>
             <DialogTitle>{selectedGoal ? "Editar Meta" : "Nova Meta"}</DialogTitle>
             <DialogDescription>
-              {selectedGoal ? `Atualize os valores para a meta: ${selectedGoal.title}` : "Defina uma meta personalizada para o seu planejamento financeiro."}
+              {selectedGoal ? `Atualize os valores para a meta: ${getGoalDisplayTitle(selectedGoal)}` : "Defina uma meta personalizada para o seu planejamento financeiro."}
             </DialogDescription>
           </DialogHeader>
 
@@ -254,6 +303,7 @@ function MetasPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Economia">Meta de economia</SelectItem>
+                  <SelectItem value="Mensal">Meta mensal</SelectItem>
                   <SelectItem value="Anual">Meta anual</SelectItem>
                   <SelectItem value="Patrimônio">Meta de patrimônio</SelectItem>
                   <SelectItem value="Investimento">Meta de investimento</SelectItem>
@@ -262,7 +312,7 @@ function MetasPage() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="title">Nome da meta</Label>
+              <Label htmlFor="title">Nome personalizado (opcional)</Label>
               <Input
                 id="title"
                 value={title}

@@ -14,6 +14,18 @@ export interface Movement {
   amount: number;
   nature?: "credito" | "debito" | "dinheiro" | null;
   expense_type?: "fixo" | "variavel" | null;
+  card_id?: string | null;
+  invoice_month?: string | null;
+  created_at: string;
+}
+
+export interface CreditCard {
+  id: string;
+  user_id: string;
+  name: string;
+  limit: number;
+  closing_day: number;
+  due_day: number;
   created_at: string;
 }
 
@@ -84,6 +96,8 @@ export function useAddMovement() {
         user_id: user.id,
         ...(movement.type === "despesa" && movement.nature ? { nature: movement.nature } : {}),
         ...(movement.type === "despesa" && movement.expense_type ? { expense_type: movement.expense_type } : {}),
+        ...(movement.card_id ? { card_id: movement.card_id } : {}),
+        ...(movement.invoice_month ? { invoice_month: movement.invoice_month } : {}),
       };
 
       let { data, error } = await supabase
@@ -139,7 +153,88 @@ export function useDeleteMovement() {
   });
 }
 
-// 4. Hook para buscar metas
+// 4. Hook para buscar cartões de crédito
+export function useCreditCards() {
+  return useQuery<CreditCard[]>({
+    queryKey: ["credit_cards"],
+    queryFn: async () => {
+      const storedSession = getStoredSession();
+      if (storedSession?.demo) {
+        return getDemoDataStore().creditCards || [];
+      }
+
+      const { data, error } = await supabase
+        .from("credit_cards")
+        .select("*")
+        .order("created_at", { ascending: true });
+
+      if (error) throw error;
+      return data || [];
+    },
+  });
+}
+
+// 5. Hook para criar cartão de crédito
+export function useCreateCreditCard() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ name, limit, closing_day, due_day }: { name: string; limit: number; closing_day: number; due_day: number }) => {
+      const storedSession = getStoredSession();
+      if (storedSession?.demo) {
+        const store = getDemoDataStore();
+        const newCard = {
+          id: crypto.randomUUID(),
+          user_id: "demo-user",
+          name,
+          limit,
+          closing_day,
+          due_day,
+          created_at: new Date().toISOString(),
+        } as CreditCard;
+        saveDemoDataStore({ ...store, creditCards: [newCard, ...store.creditCards] });
+        return newCard;
+      }
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Usuário não autenticado");
+
+      const { data, error } = await supabase
+        .from("credit_cards")
+        .insert([{ user_id: user.id, name, limit, closing_day, due_day }])
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["credit_cards"] });
+    },
+  });
+}
+
+// 6. Hook para excluir cartão de crédito
+export function useDeleteCreditCard() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const storedSession = getStoredSession();
+      if (storedSession?.demo) {
+        const store = getDemoDataStore();
+        saveDemoDataStore({ ...store, creditCards: store.creditCards.filter((card) => card.id !== id) });
+        return;
+      }
+
+      const { error } = await supabase.from("credit_cards").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["credit_cards"] });
+    },
+  });
+}
+
+// 7. Hook para buscar metas
 export function useGoals() {
   return useQuery<Goal[]>({
     queryKey: ["goals"],
@@ -164,13 +259,13 @@ export function useGoals() {
 export function useUpdateGoal() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, current, target, description }: { id: string; current?: number; target?: number; description?: string | null }) => {
+    mutationFn: async ({ id, title, current, target, description }: { id: string; title?: string; current?: number; target?: number; description?: string | null }) => {
       const storedSession = getStoredSession();
       if (storedSession?.demo) {
         const store = getDemoDataStore();
         const updatedGoals = store.goals.map((goal) =>
           goal.id === id
-            ? { ...goal, ...(current !== undefined ? { current } : {}), ...(target !== undefined ? { target } : {}), ...(description !== undefined ? { description } : {}) }
+            ? { ...goal, ...(title !== undefined ? { title } : {}), ...(current !== undefined ? { current } : {}), ...(target !== undefined ? { target } : {}), ...(description !== undefined ? { description } : {}) }
             : goal,
         );
         saveDemoDataStore({ ...store, goals: updatedGoals });
@@ -178,6 +273,7 @@ export function useUpdateGoal() {
       }
 
       const updateData: Record<string, any> = {};
+      if (title !== undefined) updateData.title = title;
       if (current !== undefined) updateData.current = current;
       if (target !== undefined) updateData.target = target;
       if (description !== undefined) updateData.description = description;

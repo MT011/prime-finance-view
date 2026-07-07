@@ -180,8 +180,7 @@ function DashboardPage() {
     receitasPrev,
     despesasPrev,
     economiaPrev,
-    hasEconomyGoal,
-    hasEmergencyGoal,
+    dashboardGoals,
   } = useMemo(() => {
     const currentMonth = new Date().getMonth();
     const currentYear = new Date().getFullYear();
@@ -217,14 +216,22 @@ function DashboardPage() {
 
     const lastEmergencyValue = emergencySavings.length > 0 ? Number(emergencySavings[emergencySavings.length - 1].value) : 0;
 
-    const emergencyGoal = goals.find((g) => {
-      const title = (g.title || "").toLowerCase();
-      return title.includes("reserva") || title.includes("emergência");
+    const sortedGoals = [...goals].sort((a, b) => {
+      const aDate = new Date(a.created_at || 0).getTime();
+      const bDate = new Date(b.created_at || 0).getTime();
+      return aDate - bDate;
     });
-    const monthlyGoal = goals.find((g) => {
+
+    const emergencyGoal = sortedGoals.find((g) => {
       const title = (g.title || "").toLowerCase();
-      return title.includes("economia") || title.includes("mensal") || title.includes("meta");
+      const period = (g.period || "").toLowerCase();
+      return title.includes("reserva") || title.includes("emergência") || period.includes("reserva");
     });
+    const monthlyGoal = sortedGoals.find((g) => {
+      const title = (g.title || "").toLowerCase();
+      const period = (g.period || "").toLowerCase();
+      return title.includes("economia") || title.includes("mensal") || title.includes("meta") || period.includes("mensal");
+    }) || sortedGoals[0];
 
     const pat = saldo + (lastEmergencyValue || Number(emergencyGoal?.current || 0));
 
@@ -241,8 +248,7 @@ function DashboardPage() {
       receitasPrev: recPrev,
       despesasPrev: desPrev,
       economiaPrev: ecoPrev,
-      hasEconomyGoal: Boolean(monthlyGoal),
-      hasEmergencyGoal: Boolean(emergencyGoal),
+      dashboardGoals: sortedGoals,
     };
   }, [movements, goals, emergencySavings]);
 
@@ -457,64 +463,43 @@ function DashboardPage() {
         </div>
 
         {/* Row 3: Goals */}
-        <div className={`grid grid-cols-1 gap-4 ${hasEconomyGoal || hasEmergencyGoal ? "lg:grid-cols-3" : "lg:grid-cols-1"}`}>
-          {hasEconomyGoal && (
-            <Card className="glass-card card-hover">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-base">Meta de Economia</CardTitle>
-                  <Badge variant="secondary" className="bg-primary/15 text-primary">
-                    {metaGuardar > 0 ? `${Math.max(0, Math.min(100, Math.round((guardadoMes / metaGuardar) * 100)))}%` : "0%"}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-end justify-between">
-                  <div>
-                    <p className="text-xs text-muted-foreground">Atual</p>
-                    <p className="text-2xl font-bold">{format(guardadoMes)}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xs text-muted-foreground">Meta</p>
-                    <p className="text-sm font-medium">{format(metaGuardar)}</p>
-                  </div>
-                </div>
-                <Progress value={metaGuardar > 0 ? (guardadoMes / metaGuardar) * 100 : 0} className="h-2" />
-                <p className="text-xs text-muted-foreground">
-                  Faltam {format(Math.max(0, metaGuardar - guardadoMes))} para atingir sua meta mensal.
-                </p>
-              </CardContent>
-            </Card>
-          )}
+        <div className={`grid grid-cols-1 gap-4 ${dashboardGoals.length > 0 ? "lg:grid-cols-3" : "lg:grid-cols-1"}`}>
+          {dashboardGoals.map((goal: any) => {
+            const current = Number(goal.current || 0);
+            const target = Number(goal.target || 0);
+            const pct = target > 0 ? Math.max(0, Math.min(100, Math.round((current / target) * 100))) : 0;
+            const isEmergency = (goal.title || "").toLowerCase().includes("reserva") || (goal.title || "").toLowerCase().includes("emergência") || (goal.period || "").toLowerCase().includes("reserva");
 
-          {hasEmergencyGoal && (
-            <Card className="glass-card card-hover">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-base">Reserva de Emergência</CardTitle>
-                  <Badge variant="secondary" className="bg-info/15 text-info">
-                    {reservaMeta > 0 ? `${Math.max(0, Math.min(100, Math.round((reservaAtual / reservaMeta) * 100)))}%` : "0%"}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-end justify-between">
-                  <div>
-                    <p className="text-xs text-muted-foreground">Atual</p>
-                    <p className="text-2xl font-bold">{format(reservaAtual)}</p>
+            return (
+              <Card key={goal.id || goal.title} className="glass-card card-hover">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base">{goal.title}</CardTitle>
+                    <Badge variant="secondary" className={isEmergency ? "bg-info/15 text-info" : "bg-primary/15 text-primary"}>
+                      {pct}%
+                    </Badge>
                   </div>
-                  <div className="text-right">
-                    <p className="text-xs text-muted-foreground">Meta</p>
-                    <p className="text-sm font-medium">{format(reservaMeta)}</p>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {goal.description && <p className="text-sm text-muted-foreground">{goal.description}</p>}
+                  <div className="flex items-end justify-between">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Atual</p>
+                      <p className="text-2xl font-bold">{format(current)}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-muted-foreground">Meta</p>
+                      <p className="text-sm font-medium">{format(target)}</p>
+                    </div>
                   </div>
-                </div>
-                <Progress value={reservaMeta > 0 ? (reservaAtual / reservaMeta) * 100 : 0} className="h-2" />
-                <p className="text-xs text-muted-foreground">
-                  Continue guardando ~R$ 1.500/mês para atingir em ~12 meses.
-                </p>
-              </CardContent>
-            </Card>
-          )}
+                  <Progress value={pct} className="h-2" />
+                  <p className="text-xs text-muted-foreground">
+                    Faltam {format(Math.max(0, target - current))} para atingir sua meta.
+                  </p>
+                </CardContent>
+              </Card>
+            );
+          })}
 
           <Card className="glass-card card-hover">
             <CardHeader>

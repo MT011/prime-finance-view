@@ -4,12 +4,14 @@ export type DemoDataStore = {
   movements: any[];
   goals: any[];
   emergencySavings: any[];
+  creditCards: any[];
 };
 
 const defaultStore: DemoDataStore = {
   movements: [],
   goals: [],
   emergencySavings: [],
+  creditCards: [],
 };
 
 export function getDemoDataStore(): DemoDataStore {
@@ -28,6 +30,7 @@ export function getDemoDataStore(): DemoDataStore {
       movements: Array.isArray(parsed?.movements) ? parsed.movements : [],
       goals: Array.isArray(parsed?.goals) ? parsed.goals : [],
       emergencySavings: Array.isArray(parsed?.emergencySavings) ? parsed.emergencySavings : [],
+      creditCards: Array.isArray(parsed?.creditCards) ? parsed.creditCards : [],
     };
   } catch {
     return defaultStore;

@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Plus, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useCreditCards } from "@/hooks/queries";
+import { getCreditCardInvoiceInfo } from "@/lib/credit-cards";
 
 type MovementNature = "credito" | "debito" | "dinheiro";
 type ExpenseType = "fixo" | "variavel";
@@ -38,9 +40,11 @@ export function NewMovementFab() {
   const [description, setDescription] = useState("");
   const [nature, setNature] = useState<MovementNature | "">("");
   const [expenseType, setExpenseType] = useState<ExpenseType | "">("");
+  const [cardId, setCardId] = useState("");
   const [saving, setSaving] = useState(false);
 
   const addMovementMutation = useAddMovement();
+  const { data: creditCards = [] } = useCreditCards();
   const storedCategories = getStoredCategories();
   const availableCategories = type === "receita" ? storedCategories.receitas : storedCategories.despesas;
 
@@ -72,6 +76,9 @@ export function NewMovementFab() {
     }
     setSaving(true);
     try {
+      const selectedCard = creditCards.find((card) => card.id === cardId);
+      const invoiceInfo = selectedCard ? getCreditCardInvoiceInfo(date, selectedCard) : null;
+
       await addMovementMutation.mutateAsync({
         date,
         description: description.trim(),
@@ -83,6 +90,8 @@ export function NewMovementFab() {
           ? {
               nature: nature as MovementNature,
               expense_type: expenseType as ExpenseType,
+              card_id: selectedCard?.id || null,
+              invoice_month: invoiceInfo?.monthKey || null,
             }
           : {}),
       });
@@ -96,6 +105,7 @@ export function NewMovementFab() {
       setDescription("");
       setNature("");
       setExpenseType("");
+      setCardId("");
       setOpen(false);
     } catch (error: any) {
       console.error(error);
@@ -216,6 +226,29 @@ export function NewMovementFab() {
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+          )}
+
+          {type === "despesa" && (
+            <div className="space-y-2">
+              <Label>Cartão utilizado</Label>
+              <Select value={cardId} onValueChange={setCardId} disabled={saving}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um cartão (opcional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  {creditCards.map((card) => (
+                    <SelectItem key={card.id} value={card.id}>
+                      {card.name} · Fechamento {card.closing_day} · Vencimento {card.due_day}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {cardId && (
+                <p className="text-xs text-muted-foreground">
+                  {getCreditCardInvoiceInfo(date, creditCards.find((card) => card.id === cardId))?.label} · vence {getCreditCardInvoiceInfo(date, creditCards.find((card) => card.id === cardId))?.dueDate}
+                </p>
+              )}
             </div>
           )}
 

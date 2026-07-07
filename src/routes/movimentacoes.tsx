@@ -24,8 +24,9 @@ import { Button } from "@/components/ui/button";
 import { accounts, categoriesList } from "@/lib/mock-data";
 import { useValueVisibility } from "@/lib/value-visibility";
 import { Search, ChevronLeft, ChevronRight, Loader2, Trash2 } from "lucide-react";
-import { useMovements, useDeleteMovement } from "@/hooks/queries";
+import { useMovements, useDeleteMovement, useCreditCards } from "@/hooks/queries";
 import { toast } from "sonner";
+import { getCreditCardInvoiceInfo } from "@/lib/credit-cards";
 
 export const Route = createFileRoute("/movimentacoes")({
   head: () => ({
@@ -49,6 +50,7 @@ function MovimentacoesPage() {
   const [page, setPage] = useState(1);
 
   const { data: movements = [], isLoading } = useMovements();
+  const { data: creditCards = [] } = useCreditCards();
   const deleteMovementMutation = useDeleteMovement();
 
   const handleDelete = async (id: string) => {
@@ -154,6 +156,7 @@ function MovimentacoesPage() {
                   <TableHead>Descrição</TableHead>
                   <TableHead>Categoria</TableHead>
                   <TableHead>Conta</TableHead>
+                  <TableHead>Fatura</TableHead>
                   <TableHead>Tipo</TableHead>
                   <TableHead className="text-right">Valor</TableHead>
                   <TableHead className="text-right w-[60px]"></TableHead>
@@ -177,6 +180,13 @@ function MovimentacoesPage() {
                       <Badge variant="outline" className="font-normal">{m.category}</Badge>
                     </TableCell>
                     <TableCell className="text-muted-foreground">{m.account}</TableCell>
+                    <TableCell className="text-muted-foreground text-xs">
+                      {m.card_id ? (() => {
+                        const card = creditCards.find((item) => item.id === m.card_id);
+                        const info = getCreditCardInvoiceInfo(m.date, card);
+                        return info ? `${info.label} · vence ${info.dueDate}` : "Cartão";
+                      })() : "—"}
+                    </TableCell>
                     <TableCell>
                       <span
                         className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${

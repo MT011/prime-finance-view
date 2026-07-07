@@ -16,6 +16,7 @@ import { Route as MovimentacoesRouteImport } from './routes/movimentacoes'
 import { Route as MetasRouteImport } from './routes/metas'
 import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
 import { Route as CategoriasRouteImport } from './routes/categorias'
+import { Route as CartoesRouteImport } from './routes/cartoes'
 import { Route as AssistenteRouteImport } from './routes/assistente'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiClaudeRouteImport } from './routes/api/claude'
@@ -55,6 +56,11 @@ const CategoriasRoute = CategoriasRouteImport.update({
   path: '/categorias',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CartoesRoute = CartoesRouteImport.update({
+  id: '/cartoes',
+  path: '/cartoes',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AssistenteRoute = AssistenteRouteImport.update({
   id: '/assistente',
   path: '/assistente',
@@ -74,6 +80,7 @@ const ApiClaudeRoute = ApiClaudeRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/assistente': typeof AssistenteRoute
+  '/cartoes': typeof CartoesRoute
   '/categorias': typeof CategoriasRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/metas': typeof MetasRoute
@@ -86,6 +93,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/assistente': typeof AssistenteRoute
+  '/cartoes': typeof CartoesRoute
   '/categorias': typeof CategoriasRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/metas': typeof MetasRoute
@@ -99,6 +107,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/assistente': typeof AssistenteRoute
+  '/cartoes': typeof CartoesRoute
   '/categorias': typeof CategoriasRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/metas': typeof MetasRoute
@@ -113,6 +122,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/assistente'
+    | '/cartoes'
     | '/categorias'
     | '/configuracoes'
     | '/metas'
@@ -125,6 +135,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/assistente'
+    | '/cartoes'
     | '/categorias'
     | '/configuracoes'
     | '/metas'
@@ -137,6 +148,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/assistente'
+    | '/cartoes'
     | '/categorias'
     | '/configuracoes'
     | '/metas'
@@ -150,6 +162,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AssistenteRoute: typeof AssistenteRoute
+  CartoesRoute: typeof CartoesRoute
   CategoriasRoute: typeof CategoriasRoute
   ConfiguracoesRoute: typeof ConfiguracoesRoute
   MetasRoute: typeof MetasRoute
@@ -211,6 +224,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CategoriasRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/cartoes': {
+      id: '/cartoes'
+      path: '/cartoes'
+      fullPath: '/cartoes'
+      preLoaderRoute: typeof CartoesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/assistente': {
       id: '/assistente'
       path: '/assistente'
@@ -238,6 +258,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AssistenteRoute: AssistenteRoute,
+  CartoesRoute: CartoesRoute,
   CategoriasRoute: CategoriasRoute,
   ConfiguracoesRoute: ConfiguracoesRoute,
   MetasRoute: MetasRoute,
