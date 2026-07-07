@@ -3,9 +3,10 @@ import { AppHeader } from "@/components/app-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useValueVisibility } from "@/lib/value-visibility";
-import { Target, Loader2, Edit2, Plus, Sparkles } from "lucide-react";
-import { useCreateGoal, useDeleteGoal, useGoals, useUpdateGoal } from "@/hooks/queries";
+import { Target, Loader2, Edit2, Plus, Sparkles, RotateCcw, Banknote } from "lucide-react";
+import { useCreateGoal, useDeleteGoal, useGoals, useUpdateGoal, useGoalHistory, useCreditCards } from "@/hooks/queries";
 import { useState } from "react";
 import {
   Dialog,
@@ -22,16 +23,70 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 
-function getGoalTypeLabel(period?: string) {
-  const normalized = (period || "").toLowerCase();
+function getGoalTypeLabel(type?: string) {
+  const normalized = (type || "").toLowerCase();
 
-  if (normalized.includes("anual")) return "Meta anual";
   if (normalized.includes("patrimônio")) return "Meta de patrimônio";
   if (normalized.includes("investimento")) return "Meta de investimento";
   if (normalized.includes("reserva") || normalized.includes("emergência")) return "Reserva de emergência";
-  if (normalized.includes("economia") || normalized.includes("mensal")) return "Meta de economia";
 
-  return "Meta";
+  return "Meta de economia";
+}
+
+
+
+function getCalendarMonthKey(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function getCardCycleKey(card: { closing_day: number }): string {
+  const d = new Date();
+  const day = d.getDate();
+  const month = d.getMonth();
+  const year = d.getFullYear();
+  const cd = card.closing_day;
+
+  if (day > cd) {
+    const nextMonth = month + 1;
+    const cy = nextMonth > 11 ? year + 1 : year;
+    const cm = nextMonth > 11 ? 0 : nextMonth;
+    return `${cy}-${String(cm + 1).padStart(2, "0")}-${String(cd).padStart(2, "0")}`;
+  }
+  return `${year}-${String(month + 1).padStart(2, "0")}-${String(cd).padStart(2, "0")}`;
+}
+
+function getCycleKey(goal: any, cards: any[]): string {
+  if (goal.card_id) {
+    const card = cards.find((c: any) => c.id === goal.card_id);
+    if (card?.closing_day) return getCardCycleKey(card);
+  }
+  return getCalendarMonthKey();
+}
+
+function formatCycleKey(key: string): string {
+  const parts = key.split("-");
+  if (parts.length === 3) {
+    const months = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+    const m = parseInt(parts[1]) - 1;
+    const label = `${months[m]}/${parts[0]}`;
+    if (parts[2]) return `${label} (fecha dia ${parseInt(parts[2])})`;
+    return label;
+  }
+  return key;
+}
+
+function getCurrentMonthLabel(cards: any[], goal?: any): string {
+  if (goal?.card_id) {
+    const card = cards.find((c: any) => c.id === goal.card_id);
+    if (card?.closing_day) {
+      const key = getCardCycleKey(card);
+      return formatCycleKey(key);
+    }
+  }
+  const months = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+  const d = new Date();
+  return `${months[d.getMonth()]}/${d.getFullYear()}`;
 }
 
 function getGoalDisplayTitle(goal: any) {
@@ -53,6 +108,8 @@ export const Route = createFileRoute("/metas")({
 function MetasPage() {
   const { format } = useValueVisibility();
   const { data: goals = [], isLoading } = useGoals();
+  const { data: creditCards = [] } = useCreditCards();
+  const { data: goalHistory = [] } = useGoalHistory();
   const updateGoalMutation = useUpdateGoal();
   const createGoalMutation = useCreateGoal();
   const deleteGoalMutation = useDeleteGoal();
@@ -62,17 +119,24 @@ function MetasPage() {
   const [title, setTitle] = useState("");
   const [currentVal, setCurrentVal] = useState("");
   const [targetVal, setTargetVal] = useState("");
-  const [period, setPeriod] = useState("Economia");
+  const [goalType, setGoalType] = useState("Economia");
+  const [goalPeriod, setGoalPeriod] = useState("Mensal");
   const [description, setDescription] = useState("");
   const [updating, setUpdating] = useState(false);
   const [goalToDelete, setGoalToDelete] = useState<any>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
+  const [card_id, setCardId] = useState<string>("");
+
+  const [depositGoal, setDepositGoal] = useState<any>(null);
+  const [isDepositDialogOpen, setIsDepositDialogOpen] = useState(false);
+  const [depositAmount, setDepositAmount] = useState("");
+
   const suggestedGoals = [
-    { title: "Meta mensal", period: "Mensal", target: 2000, current: 0, description: "Estabeleça uma reserva mensal para suas despesas e economia." },
-    { title: "Meta anual", period: "Anual", target: 24000, current: 0, description: "Defina um objetivo de economia ou investimento para o ano." },
-    { title: "Meta de patrimônio", period: "Patrimônio", target: 100000, current: 0, description: "Acompanhe o crescimento do seu patrimônio líquido." },
-    { title: "Meta de investimento", period: "Investimento", target: 15000, current: 0, description: "Monitore aportes regulares em seus investimentos." },
+    { title: "Economia mensal", type: "Economia", period: "Mensal", target: 2000, current: 0, description: "Estabeleça uma reserva mensal para suas despesas e economia." },
+    { title: "Economia anual", type: "Economia", period: "Anual", target: 24000, current: 0, description: "Defina um objetivo de economia para o ano." },
+    { title: "Meta de patrimônio", type: "Patrimônio", period: "Anual", target: 100000, current: 0, description: "Acompanhe o crescimento do seu patrimônio líquido." },
+    { title: "Meta de investimento", type: "Investimento", period: "Anual", target: 15000, current: 0, description: "Monitore aportes regulares em seus investimentos." },
   ];
 
   const visibleGoals = goals;
@@ -83,8 +147,10 @@ function MetasPage() {
     setTitle("");
     setCurrentVal("");
     setTargetVal("");
-    setPeriod("Economia");
+    setGoalType("Economia");
+    setGoalPeriod("Mensal");
     setDescription("");
+    setCardId("");
     setIsDialogOpen(false);
   };
 
@@ -93,8 +159,10 @@ function MetasPage() {
     setTitle(template?.title || "");
     setCurrentVal(template ? String(template.current) : "");
     setTargetVal(template ? String(template.target) : "");
-    setPeriod(template?.period || "Economia");
+    setGoalType(template?.type || "Economia");
+    setGoalPeriod(template?.period || "Mensal");
     setDescription(template?.description || "");
+    setCardId("");
     setIsDialogOpen(true);
   };
 
@@ -103,8 +171,10 @@ function MetasPage() {
     setTitle((g.title || "").trim() && (g.title || "").trim() !== getGoalTypeLabel(g.period) ? g.title : "");
     setCurrentVal(String(g.current));
     setTargetVal(String(g.target));
-    setPeriod(g.period || "Economia");
+    setGoalType(g.period || "Economia");
+    setGoalPeriod(g.reset_monthly ? "Mensal" : "Anual");
     setDescription(g.description || "");
+    setCardId(g.card_id || "");
     setIsDialogOpen(true);
   };
 
@@ -127,14 +197,60 @@ function MetasPage() {
     }
   };
 
-  const handleSave = async () => {
-    const current = parseFloat(currentVal);
-    const target = parseFloat(targetVal);
-    const resolvedTitle = title.trim() || getGoalTypeLabel(period);
-    if (isNaN(current) || isNaN(target) || target <= 0) {
-      toast.error("Preencha valores válidos para salvar a meta.");
+  const handleDepositRequest = (goal: any) => {
+    setDepositGoal(goal);
+    setDepositAmount("");
+    setIsDepositDialogOpen(true);
+  };
+
+  const confirmDeposit = async () => {
+    const amount = parseFloat(depositAmount);
+    if (isNaN(amount) || amount <= 0) {
+      toast.error("Digite um valor válido para depositar.");
       return;
     }
+    if (!depositGoal?.id) return;
+    try {
+      const newCurrent = (depositGoal.current || 0) + amount;
+      const cycleKey = getCycleKey(depositGoal, creditCards);
+      await updateGoalMutation.mutateAsync({
+        id: depositGoal.id,
+        current: newCurrent,
+        last_reset_month: cycleKey,
+      });
+      toast.success(`R$ ${amount.toFixed(2)} adicionado à meta!`);
+      setIsDepositDialogOpen(false);
+      setDepositGoal(null);
+    } catch (error: any) {
+      toast.error("Erro ao adicionar depósito: " + error.message);
+    }
+  };
+
+  const handleResetMonth = async (goal: any) => {
+    if (!goal?.id) return;
+    try {
+      const cycleKey = getCycleKey(goal, creditCards);
+      await updateGoalMutation.mutateAsync({
+        id: goal.id,
+        current: 0,
+        last_reset_month: cycleKey,
+      });
+      toast.success("Mês zerado com sucesso!");
+    } catch (error: any) {
+      toast.error("Erro ao zerar mês: " + error.message);
+    }
+  };
+
+  const handleSave = async () => {
+    const current = currentVal ? parseFloat(currentVal) : 0;
+    const target = parseFloat(targetVal);
+    const resolvedTitle = title.trim() || getGoalTypeLabel(goalType);
+    if (isNaN(target) || target <= 0) {
+      toast.error("Defina um valor alvo válido para salvar a meta.");
+      return;
+    }
+
+    const isMonthly = goalPeriod === "Mensal";
 
     setUpdating(true);
     try {
@@ -145,6 +261,8 @@ function MetasPage() {
           current,
           target,
           description: description.trim() || null,
+          reset_monthly: isMonthly || undefined,
+          card_id: card_id || null,
         });
         toast.success("Meta atualizada com sucesso!");
       } else {
@@ -152,8 +270,10 @@ function MetasPage() {
           title: resolvedTitle,
           current,
           target,
-          period,
+          period: goalType,
           description: description.trim() || null,
+          reset_monthly: isMonthly,
+          card_id: card_id || null,
         });
         toast.success("Meta criada com sucesso!");
       }
@@ -209,6 +329,7 @@ function MetasPage() {
           {visibleGoals.map((g: any) => {
             const pct = Math.min(100, Math.round((Number(g.current) / Number(g.target)) * 100));
             const displayTitle = getGoalDisplayTitle(g);
+            const isMonthly = g.reset_monthly || g.period === "Mensal";
             return (
               <Card key={g.id || g.title} className="glass-card card-hover relative group">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -227,24 +348,47 @@ function MetasPage() {
                     <p className="text-sm text-muted-foreground">{g.description}</p>
                   )}
                   <div>
+                    {isMonthly && (
+                      <p className="text-xs text-muted-foreground mb-1">
+                        {getCurrentMonthLabel(creditCards, g)}
+                      </p>
+                    )}
                     <p className="text-2xl font-bold">{format(Number(g.current))}</p>
                     <p className="text-xs text-muted-foreground">
-                      de {format(Number(g.target))} · {g.period}
+                      de {format(Number(g.target))} · {g.reset_monthly ? "Mensal" : g.period}
                     </p>
                   </div>
                   <Progress value={pct} className="h-2" />
-                  <div className="flex justify-between items-center min-h-[32px] gap-2">
+                  <div className="flex flex-wrap justify-between items-center gap-2">
                     <p className="text-xs text-muted-foreground">
                       Faltam {format(Math.max(0, Number(g.target) - Number(g.current)))}
                     </p>
                     <div className="flex items-center gap-1">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 px-2 text-xs gap-1"
+                        onClick={() => handleDepositRequest(g)}
+                      >
+                        <Banknote className="h-3.5 w-3.5" /> Depositar
+                      </Button>
+                      {isMonthly && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground"
+                          onClick={() => handleResetMonth(g)}
+                        >
+                          <RotateCcw className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
                       <Button
                         variant="ghost"
                         size="sm"
                         className="h-8 px-2 text-xs"
                         onClick={() => handleOpenEdit(g)}
                       >
-                        <Edit2 className="mr-1 h-3.5 w-3.5" /> Editar
+                        <Edit2 className="h-3.5 w-3.5" />
                       </Button>
                       <Button
                         variant="ghost"
@@ -261,6 +405,51 @@ function MetasPage() {
             );
           })}
         </div>
+
+        {goalHistory.length > 0 && (
+          <Card className="glass-card mt-6">
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-primary/15 text-primary">
+                  <Target className="h-4 w-4" />
+                </span>
+                <CardTitle className="text-base">Histórico de metas mensais</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Meta</TableHead>
+                      <TableHead>Mês</TableHead>
+                      <TableHead className="text-right">Alcançado</TableHead>
+                      <TableHead className="text-right">Meta</TableHead>
+                      <TableHead className="text-right">Resultado</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {goalHistory.slice(0, 20).map((h: any) => (
+                      <TableRow key={h.id}>
+                        <TableCell className="font-medium">{h.goal_title}</TableCell>
+                        <TableCell className="text-muted-foreground">{h.month}</TableCell>
+                        <TableCell className="text-right">
+                          {h.achieved ? (
+                            <span className="text-success font-medium">Sim</span>
+                          ) : (
+                            <span className="text-destructive font-medium">Não</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">{format(Number(h.target))}</TableCell>
+                        <TableCell className="text-right">{format(Number(h.current))}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </main>
 
       <Dialog open={isDeleteDialogOpen} onOpenChange={(open) => {
@@ -285,6 +474,49 @@ function MetasPage() {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={isDepositDialogOpen} onOpenChange={(open) => {
+        setIsDepositDialogOpen(open);
+        if (!open) setDepositGoal(null);
+      }}>
+        <DialogContent className="glass-card sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Adicionar depósito</DialogTitle>
+            <DialogDescription>
+              {depositGoal ? `Adicione um valor à meta "${getGoalDisplayTitle(depositGoal)}".` : ""}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            {depositGoal && (
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Progresso atual</span>
+                <span className="font-medium">{format(Number(depositGoal.current))} de {format(Number(depositGoal.target))}</span>
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label htmlFor="deposit-amount">Valor do depósito</Label>
+              <Input
+                id="deposit-amount"
+                type="number"
+                step="0.01"
+                min="0.01"
+                value={depositAmount}
+                onChange={(e) => setDepositAmount(e.target.value)}
+                placeholder="Ex.: 200"
+                autoFocus
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => { setIsDepositDialogOpen(false); setDepositGoal(null); }}>
+              Cancelar
+            </Button>
+            <Button onClick={confirmDeposit} disabled={updateGoalMutation.isPending}>
+              {updateGoalMutation.isPending ? "Adicionando..." : "Adicionar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!open) resetForm(); }}>
         <DialogContent className="glass-card sm:max-w-md">
           <DialogHeader>
@@ -295,21 +527,33 @@ function MetasPage() {
           </DialogHeader>
 
           <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label htmlFor="period">Tipo de meta</Label>
-              <Select value={period} onValueChange={setPeriod} disabled={updating}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Economia">Meta de economia</SelectItem>
-                  <SelectItem value="Mensal">Meta mensal</SelectItem>
-                  <SelectItem value="Anual">Meta anual</SelectItem>
-                  <SelectItem value="Patrimônio">Meta de patrimônio</SelectItem>
-                  <SelectItem value="Investimento">Meta de investimento</SelectItem>
-                  <SelectItem value="Reserva">Reserva de emergência</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="goalType">Tipo de meta</Label>
+                <Select value={goalType} onValueChange={setGoalType} disabled={updating}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Economia">Economia</SelectItem>
+                    <SelectItem value="Patrimônio">Patrimônio</SelectItem>
+                    <SelectItem value="Investimento">Investimento</SelectItem>
+                    <SelectItem value="Reserva">Reserva de emergência</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="goalPeriod">Período</Label>
+                <Select value={goalPeriod} onValueChange={setGoalPeriod} disabled={updating}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Mensal">Mensal</SelectItem>
+                    <SelectItem value="Anual">Anual</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="title">Nome personalizado (opcional)</Label>
@@ -333,7 +577,21 @@ function MetasPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="currentVal">Valor Atual</Label>
+              <Label>Vincular cartão (opcional)</Label>
+              <Select value={card_id} onValueChange={(v) => setCardId(v === "none" ? "" : v)} disabled={updating}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Nenhum cartão" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Nenhum cartão</SelectItem>
+                  {creditCards.map((card: any) => (
+                    <SelectItem key={card.id} value={card.id}>{card.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="currentVal">Valor Atual <span className="text-muted-foreground font-normal">(opcional)</span></Label>
               <Input
                 id="currentVal"
                 type="number"

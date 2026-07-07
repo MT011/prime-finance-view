@@ -233,7 +233,8 @@ function DashboardPage() {
       return title.includes("economia") || title.includes("mensal") || title.includes("meta") || period.includes("mensal");
     }) || sortedGoals[0];
 
-    const pat = saldo + (lastEmergencyValue || Number(emergencyGoal?.current || 0));
+    const goalsCurrent = goals.reduce((sum, g) => sum + Number(g.current || 0), 0);
+    const pat = saldo + goalsCurrent + (lastEmergencyValue || 0);
 
     return {
       saldoAtual: saldo,

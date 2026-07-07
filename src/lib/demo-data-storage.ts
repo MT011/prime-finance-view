@@ -3,6 +3,7 @@ const STORAGE_KEY = "finance-dashboard-demo-data";
 export type DemoDataStore = {
   movements: any[];
   goals: any[];
+  goalHistory: any[];
   emergencySavings: any[];
   creditCards: any[];
 };
@@ -10,6 +11,7 @@ export type DemoDataStore = {
 const defaultStore: DemoDataStore = {
   movements: [],
   goals: [],
+  goalHistory: [],
   emergencySavings: [],
   creditCards: [],
 };
@@ -29,6 +31,7 @@ export function getDemoDataStore(): DemoDataStore {
     return {
       movements: Array.isArray(parsed?.movements) ? parsed.movements : [],
       goals: Array.isArray(parsed?.goals) ? parsed.goals : [],
+      goalHistory: Array.isArray(parsed?.goalHistory) ? parsed.goalHistory : [],
       emergencySavings: Array.isArray(parsed?.emergencySavings) ? parsed.emergencySavings : [],
       creditCards: Array.isArray(parsed?.creditCards) ? parsed.creditCards : [],
     };

@@ -37,6 +37,20 @@ export interface Goal {
   target: number;
   period: string;
   description?: string | null;
+  reset_monthly?: boolean;
+  last_reset_month?: string | null;
+  card_id?: string | null;
+  created_at: string;
+}
+
+export interface GoalHistory {
+  id: string;
+  goal_id: string;
+  goal_title: string;
+  month: string;
+  current: number;
+  target: number;
+  achieved: boolean;
   created_at: string;
 }
 
@@ -153,6 +167,34 @@ export function useDeleteMovement() {
   });
 }
 
+// 3.5 Hook para atualizar movimentação
+export function useUpdateMovement() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...data }: Partial<Movement> & { id: string }) => {
+      const storedSession = getStoredSession();
+      if (storedSession?.demo) {
+        const store = getDemoDataStore();
+        const updatedMovements = store.movements.map((movement: any) =>
+          movement.id === id ? { ...movement, ...data } : movement,
+        );
+        saveDemoDataStore({ ...store, movements: updatedMovements });
+        return;
+      }
+
+      const { error } = await supabase
+        .from("movements")
+        .update(data)
+        .eq("id", id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["movements"] });
+    },
+  });
+}
+
 // 4. Hook para buscar cartões de crédito
 export function useCreditCards() {
   return useQuery<CreditCard[]>({
@@ -235,22 +277,135 @@ export function useDeleteCreditCard() {
 }
 
 // 7. Hook para buscar metas
+function getCalendarMonthKey(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function getCardCycleKey(card: { closing_day: number }): string {
+  const d = new Date();
+  const day = d.getDate();
+  const month = d.getMonth();
+  const year = d.getFullYear();
+  const cd = card.closing_day;
+
+  if (day > cd) {
+    const nextMonth = month + 1;
+    const cy = nextMonth > 11 ? year + 1 : year;
+    const cm = nextMonth > 11 ? 0 : nextMonth;
+    return `${cy}-${String(cm + 1).padStart(2, "0")}-${String(cd).padStart(2, "0")}`;
+  }
+  return `${year}-${String(month + 1).padStart(2, "0")}-${String(cd).padStart(2, "0")}`;
+}
+
+function getCycleKey(goal: Goal, cards: any[]): string {
+  if (goal.card_id) {
+    const card = cards.find((c: any) => c.id === goal.card_id);
+    if (card && card.closing_day) return getCardCycleKey(card);
+  }
+  return getCalendarMonthKey();
+}
+
+function saveGoalHistory(goal: Goal, period: string) {
+  const historyEntry = {
+    id: crypto.randomUUID(),
+    goal_id: goal.id,
+    goal_title: goal.title,
+    month: period,
+    current: goal.current,
+    target: goal.target,
+    achieved: goal.current >= goal.target,
+    created_at: new Date().toISOString(),
+  };
+  const store = getDemoDataStore();
+  saveDemoDataStore({
+    ...store,
+    goalHistory: [...store.goalHistory, historyEntry],
+    goals: store.goals.map((g: any) =>
+      g.id === goal.id ? { ...g, current: 0, last_reset_month: period } : g,
+    ),
+  });
+}
+
+function applyMonthlyResets(goals: Goal[], cards: any[]): Goal[] {
+  const updated = goals.map((goal) => {
+    if (!goal.reset_monthly) return goal;
+    const currentKey = getCycleKey(goal, cards);
+    if (goal.last_reset_month !== currentKey) {
+      saveGoalHistory(goal, goal.last_reset_month || currentKey);
+      return { ...goal, current: 0, last_reset_month: currentKey };
+    }
+    return goal;
+  });
+  return updated;
+}
+
 export function useGoals() {
   return useQuery<Goal[]>({
     queryKey: ["goals"],
     queryFn: async () => {
       const storedSession = getStoredSession();
       if (storedSession?.demo) {
-        return getDemoDataStore().goals || [];
+        const store = getDemoDataStore();
+        const goals = store.goals || [];
+        const cards = store.creditCards || [];
+        return applyMonthlyResets(goals, cards);
       }
 
-      const { data, error } = await supabase
+      const { data: goalsData, error: goalsError } = await supabase
         .from("goals")
         .select("*")
         .order("created_at", { ascending: true });
 
-      if (error) throw error;
-      return data || [];
+      if (goalsError) throw goalsError;
+      const goals = goalsData || [];
+
+      const { data: cardsData } = await supabase
+        .from("credit_cards")
+        .select("id, closing_day");
+
+      const cards = cardsData || [];
+
+      const toUpdate = goals.filter((g) => {
+        if (!g.reset_monthly) return false;
+        const currentKey = getCycleKey(g, cards);
+        return g.last_reset_month !== currentKey;
+      });
+
+      if (toUpdate.length > 0) {
+        for (const goal of toUpdate) {
+          const currentKey = getCycleKey(goal, cards);
+          const { error: histError } = await supabase
+            .from("goal_history")
+            .insert([{
+              goal_id: goal.id,
+              goal_title: goal.title,
+              month: goal.last_reset_month || currentKey,
+              current: goal.current,
+              target: goal.target,
+              achieved: goal.current >= goal.target,
+            }]);
+          if (histError) console.error("Erro ao salvar histórico:", histError);
+        }
+
+        for (const goal of toUpdate) {
+          const currentKey = getCycleKey(goal, cards);
+          const { error: updateError } = await supabase
+            .from("goals")
+            .update({ current: 0, last_reset_month: currentKey })
+            .eq("id", goal.id);
+          if (updateError) console.error("Erro ao resetar meta:", updateError);
+        }
+      }
+
+      return goals.map((g) => {
+        if (!g.reset_monthly) return g;
+        const currentKey = getCycleKey(g, cards);
+        if (toUpdate.some((t) => t.id === g.id)) {
+          return { ...g, current: 0, last_reset_month: currentKey };
+        }
+        return g;
+      });
     },
   });
 }
@@ -259,13 +414,13 @@ export function useGoals() {
 export function useUpdateGoal() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, title, current, target, description }: { id: string; title?: string; current?: number; target?: number; description?: string | null }) => {
+    mutationFn: async ({ id, title, current, target, description, reset_monthly, last_reset_month, card_id }: { id: string; title?: string; current?: number; target?: number; description?: string | null; reset_monthly?: boolean; last_reset_month?: string | null; card_id?: string | null }) => {
       const storedSession = getStoredSession();
       if (storedSession?.demo) {
         const store = getDemoDataStore();
         const updatedGoals = store.goals.map((goal) =>
           goal.id === id
-            ? { ...goal, ...(title !== undefined ? { title } : {}), ...(current !== undefined ? { current } : {}), ...(target !== undefined ? { target } : {}), ...(description !== undefined ? { description } : {}) }
+            ? { ...goal, ...(title !== undefined ? { title } : {}), ...(current !== undefined ? { current } : {}), ...(target !== undefined ? { target } : {}), ...(description !== undefined ? { description } : {}), ...(reset_monthly !== undefined ? { reset_monthly } : {}), ...(last_reset_month !== undefined ? { last_reset_month } : {}), ...(card_id !== undefined ? { card_id } : {}) }
             : goal,
         );
         saveDemoDataStore({ ...store, goals: updatedGoals });
@@ -277,6 +432,9 @@ export function useUpdateGoal() {
       if (current !== undefined) updateData.current = current;
       if (target !== undefined) updateData.target = target;
       if (description !== undefined) updateData.description = description;
+      if (reset_monthly !== undefined) updateData.reset_monthly = reset_monthly;
+      if (last_reset_month !== undefined) updateData.last_reset_month = last_reset_month;
+      if (card_id !== undefined) updateData.card_id = card_id;
 
       const { data, error } = await supabase
         .from("goals")
@@ -298,7 +456,7 @@ export function useUpdateGoal() {
 export function useCreateGoal() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ title, current, target, period, description }: { title: string; current: number; target: number; period: string; description?: string | null }) => {
+    mutationFn: async ({ title, current, target, period, description, reset_monthly, card_id }: { title: string; current: number; target: number; period: string; description?: string | null; reset_monthly?: boolean; card_id?: string | null }) => {
       const storedSession = getStoredSession();
       if (storedSession?.demo) {
         const store = getDemoDataStore();
@@ -310,6 +468,9 @@ export function useCreateGoal() {
           target,
           period,
           description,
+          reset_monthly: reset_monthly ?? false,
+          last_reset_month: null,
+          card_id: card_id || null,
           created_at: new Date().toISOString(),
         } as Goal;
         saveDemoDataStore({ ...store, goals: [newGoal, ...store.goals] });
@@ -321,7 +482,7 @@ export function useCreateGoal() {
 
       const { data, error } = await supabase
         .from("goals")
-        .insert([{ user_id: user.id, title, current, target, period, description }])
+        .insert([{ user_id: user.id, title, current, target, period, description, reset_monthly, card_id }])
         .select()
         .single();
 
@@ -429,6 +590,27 @@ export function useSaveEmergencySavings() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["emergency_savings"] });
+    },
+  });
+}
+
+// 9. Hook para buscar histórico de metas
+export function useGoalHistory() {
+  return useQuery<GoalHistory[]>({
+    queryKey: ["goal_history"],
+    queryFn: async () => {
+      const storedSession = getStoredSession();
+      if (storedSession?.demo) {
+        return getDemoDataStore().goalHistory || [];
+      }
+
+      const { data, error } = await supabase
+        .from("goal_history")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return data || [];
     },
   });
 }
