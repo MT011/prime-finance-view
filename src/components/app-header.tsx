@@ -4,6 +4,9 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
+import { supabase } from "@/lib/supabase";
+import { getStoredSession } from "@/lib/auth-storage";
+import { useEffect, useState } from "react";
 
 type Props = {
   greeting?: boolean;
@@ -22,6 +25,26 @@ const weekday = [
 ];
 
 export function AppHeader({ greeting = false, title, subtitle }: Props) {
+  const [user, setUser] = useState<any>(null);
+
+  useEffect(() => {
+    const storedSession = getStoredSession();
+    if (storedSession?.demo) {
+      setUser(storedSession.user || null);
+      return;
+    }
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUser(user);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user || null);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const name = user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Usuário";
+  const initial = name.charAt(0).toUpperCase();
+
   const today = new Date();
   const day = today.getDate().toString().padStart(2, "0");
   const monthName = today.toLocaleDateString("pt-BR", { month: "long" });
@@ -38,7 +61,7 @@ export function AppHeader({ greeting = false, title, subtitle }: Props) {
             {greeting ? (
               <>
                 <h1 className="truncate text-xl font-semibold tracking-tight md:text-2xl">
-                  Olá, Marco <span className="inline-block">👋</span>
+                  Olá, {name} <span className="inline-block">👋</span>
                 </h1>
                 <p className="truncate text-xs text-muted-foreground md:text-sm">
                   Bem-vindo de volta. {dateStr}
@@ -75,7 +98,7 @@ export function AppHeader({ greeting = false, title, subtitle }: Props) {
           </Button>
           <Avatar className="h-9 w-9 ring-2 ring-primary/30">
             <AvatarFallback className="bg-gradient-to-br from-primary/40 to-primary/10 font-semibold">
-              M
+              {initial}
             </AvatarFallback>
           </Avatar>
         </div>

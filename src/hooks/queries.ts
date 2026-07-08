@@ -48,6 +48,7 @@ export interface Goal {
 
 export interface GoalHistory {
   id: string;
+  user_id: string;
   goal_id: string;
   goal_title: string;
   month: string;
@@ -65,6 +66,12 @@ export interface EmergencySaving {
   created_at: string;
 }
 
+async function getUserId() {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Usuário não autenticado");
+  return user.id;
+}
+
 // 1. Hook para buscar movimentações
 export function useMovements() {
   return useQuery<Movement[]>({
@@ -75,9 +82,11 @@ export function useMovements() {
         return getDemoDataStore().movements || [];
       }
 
+      const userId = await getUserId();
       const { data, error } = await supabase
         .from("movements")
         .select("*")
+        .eq("user_id", userId)
         .order("date", { ascending: false });
 
       if (error) throw error;
@@ -167,17 +176,20 @@ export function useDeleteMovement() {
         return;
       }
 
+      const userId = await getUserId();
       if (deleteAll && installmentGroupId) {
         const { error } = await supabase
           .from("movements")
           .delete()
-          .eq("installment_group_id", installmentGroupId);
+          .eq("installment_group_id", installmentGroupId)
+          .eq("user_id", userId);
         if (error) throw error;
       } else {
         const { error } = await supabase
           .from("movements")
           .delete()
-          .eq("id", id);
+          .eq("id", id)
+          .eq("user_id", userId);
         if (error) throw error;
       }
     },
@@ -212,17 +224,20 @@ export function useUpdateMovement() {
         return;
       }
 
+      const userId = await getUserId();
       if (editAllInstallments && installmentGroupId) {
         const { error } = await supabase
           .from("movements")
           .update(data)
-          .eq("installment_group_id", installmentGroupId);
+          .eq("installment_group_id", installmentGroupId)
+          .eq("user_id", userId);
         if (error) throw error;
       } else {
         const { error } = await supabase
           .from("movements")
           .update(data)
-          .eq("id", id);
+          .eq("id", id)
+          .eq("user_id", userId);
         if (error) throw error;
       }
     },
@@ -242,9 +257,11 @@ export function useCreditCards() {
         return getDemoDataStore().creditCards || [];
       }
 
+      const userId = await getUserId();
       const { data, error } = await supabase
         .from("credit_cards")
         .select("*")
+        .eq("user_id", userId)
         .order("created_at", { ascending: true });
 
       if (error) throw error;
@@ -304,7 +321,8 @@ export function useDeleteCreditCard() {
         return;
       }
 
-      const { error } = await supabase.from("credit_cards").delete().eq("id", id);
+      const userId = await getUserId();
+      const { error } = await supabase.from("credit_cards").delete().eq("id", id).eq("user_id", userId);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -389,9 +407,11 @@ export function useGoals() {
         return applyMonthlyResets(goals, cards);
       }
 
+      const userId = await getUserId();
       const { data: goalsData, error: goalsError } = await supabase
         .from("goals")
         .select("*")
+        .eq("user_id", userId)
         .order("created_at", { ascending: true });
 
       if (goalsError) throw goalsError;
@@ -399,7 +419,8 @@ export function useGoals() {
 
       const { data: cardsData } = await supabase
         .from("credit_cards")
-        .select("id, closing_day");
+        .select("id, closing_day")
+        .eq("user_id", userId);
 
       const cards = cardsData || [];
 
@@ -415,6 +436,7 @@ export function useGoals() {
           const { error: histError } = await supabase
             .from("goal_history")
             .insert([{
+              user_id: userId,
               goal_id: goal.id,
               goal_title: goal.title,
               month: goal.last_reset_month || currentKey,
@@ -473,10 +495,12 @@ export function useUpdateGoal() {
       if (last_reset_month !== undefined) updateData.last_reset_month = last_reset_month;
       if (card_id !== undefined) updateData.card_id = card_id;
 
+      const userId = await getUserId();
       const { data, error } = await supabase
         .from("goals")
         .update(updateData)
         .eq("id", id)
+        .eq("user_id", userId)
         .select()
         .single();
 
@@ -544,7 +568,8 @@ export function useDeleteGoal() {
         return;
       }
 
-      const { error } = await supabase.from("goals").delete().eq("id", id);
+      const userId = await getUserId();
+      const { error } = await supabase.from("goals").delete().eq("id", id).eq("user_id", userId);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -563,9 +588,11 @@ export function useEmergencySavings() {
         return getDemoDataStore().emergencySavings || [];
       }
 
+      const userId = await getUserId();
       const { data, error } = await supabase
         .from("emergency_savings")
         .select("*")
+        .eq("user_id", userId)
         .order("created_at", { ascending: true });
 
       if (error) throw error;
@@ -606,6 +633,7 @@ export function useSaveEmergencySavings() {
       const { data: existing } = await supabase
         .from("emergency_savings")
         .select("id")
+        .eq("user_id", user.id)
         .eq("month", month)
         .maybeSingle();
 
@@ -615,7 +643,8 @@ export function useSaveEmergencySavings() {
         ({ error } = await supabase
           .from("emergency_savings")
           .update({ value })
-          .eq("id", existing.id));
+          .eq("id", existing.id)
+          .eq("user_id", user.id));
       } else {
         // Inserir
         ({ error } = await supabase
@@ -641,9 +670,11 @@ export function useGoalHistory() {
         return getDemoDataStore().goalHistory || [];
       }
 
+      const userId = await getUserId();
       const { data, error } = await supabase
         .from("goal_history")
         .select("*")
+        .eq("user_id", userId)
         .order("created_at", { ascending: false });
 
       if (error) throw error;

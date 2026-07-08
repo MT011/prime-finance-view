@@ -5,6 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Camera, LogOut, Pencil, Mail, ShieldCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { supabase } from "@/lib/supabase";
+import { getStoredSession } from "@/lib/auth-storage";
+import { useQuery } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 
 export const Route = createFileRoute("/perfil")({
   head: () => ({
@@ -17,6 +21,61 @@ export const Route = createFileRoute("/perfil")({
 });
 
 function PerfilPage() {
+  const [user, setUser] = useState<any>(null);
+  const [userId, setUserId] = useState<string>("");
+
+  useEffect(() => {
+    const storedSession = getStoredSession();
+    if (storedSession?.demo) {
+      setUser(storedSession.user || null);
+      return;
+    }
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUser(user);
+      setUserId(user?.id || "");
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user || null);
+      setUserId(session?.user?.id || "");
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const { data: movCount } = useQuery({
+    queryKey: ["profile_mov_count", userId],
+    queryFn: async () => {
+      if (!userId) return 0;
+      const { count } = await supabase.from("movements").select("*", { count: "exact", head: true }).eq("user_id", userId);
+      return count || 0;
+    },
+    enabled: !!userId,
+  });
+
+  const { data: goalCount } = useQuery({
+    queryKey: ["profile_goal_count", userId],
+    queryFn: async () => {
+      if (!userId) return 0;
+      const { count } = await supabase.from("goals").select("*", { count: "exact", head: true }).eq("user_id", userId);
+      return count || 0;
+    },
+    enabled: !!userId,
+  });
+
+  const { data: accountCount } = useQuery({
+    queryKey: ["profile_account_count", userId],
+    queryFn: async () => {
+      if (!userId) return 0;
+      const { data } = await supabase.from("movements").select("account").eq("user_id", userId);
+      if (!data) return 0;
+      return new Set(data.map((m: any) => m.account)).size;
+    },
+    enabled: !!userId,
+  });
+
+  const name = user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Usuário";
+  const email = user?.email || "";
+  const initial = name.charAt(0).toUpperCase();
+
   return (
     <div className="flex min-h-screen flex-col">
       <AppHeader title="Perfil" subtitle="Suas informações pessoais" />
@@ -28,7 +87,7 @@ function PerfilPage() {
               <div className="relative">
                 <Avatar className="h-28 w-28 ring-4 ring-background">
                   <AvatarFallback className="bg-gradient-to-br from-primary/60 to-primary/20 text-3xl font-bold text-primary-foreground">
-                    M
+                    {initial}
                   </AvatarFallback>
                 </Avatar>
                 <Button
@@ -40,9 +99,9 @@ function PerfilPage() {
               </div>
 
               <div className="space-y-1">
-                <h2 className="text-2xl font-bold tracking-tight">Marco</h2>
+                <h2 className="text-2xl font-bold tracking-tight">{name}</h2>
                 <p className="flex items-center justify-center gap-1 text-sm text-muted-foreground">
-                  <Mail className="h-3.5 w-3.5" /> marco@email.com
+                  <Mail className="h-3.5 w-3.5" /> {email}
                 </p>
                 <Badge className="gap-1 bg-primary/15 text-primary hover:bg-primary/15">
                   <ShieldCheck className="h-3 w-3" /> Administrador
@@ -64,9 +123,9 @@ function PerfilPage() {
 
             <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-3">
               {[
-                { label: "Movimentações", value: "247" },
-                { label: "Metas ativas", value: "4" },
-                { label: "Contas", value: "5" },
+                { label: "Movimentações", value: movCount ?? "-" },
+                { label: "Metas ativas", value: goalCount ?? "-" },
+                { label: "Contas", value: accountCount ?? "-" },
               ].map((s) => (
                 <div
                   key={s.label}

@@ -37,7 +37,23 @@ create trigger on_auth_user_created
   for each row execute procedure public.handle_new_user();
 
 
--- 2. Tabela de Movimentações (Transações de Entrada e Saída)
+-- 2. Tabela de Cartões de Crédito
+create table public.credit_cards (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references auth.users on delete cascade not null default auth.uid(),
+  name text not null,
+  limit numeric not null,
+  closing_day int not null,
+  due_day int not null,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+alter table public.credit_cards enable row level security;
+
+create policy "Usuários podem gerenciar seus próprios cartões" on public.credit_cards
+  for all using (auth.uid() = user_id);
+
+-- 3. Tabela de Movimentações (Transações de Entrada e Saída)
 create table public.movements (
   id uuid default gen_random_uuid() primary key,
   user_id uuid references auth.users on delete cascade not null default auth.uid(),
@@ -49,8 +65,18 @@ create table public.movements (
   amount numeric not null,
   nature text check (nature in ('credito', 'debito', 'pix')),
   expense_type text check (expense_type in ('fixo', 'variavel')),
+  card_id uuid references public.credit_cards on delete set null,
+  invoice_month text,
+  installment_group_id uuid,
+  installment_number int,
+  total_installments int,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
+
+-- Índices para performance
+create index if not exists idx_movements_user on public.movements(user_id);
+create index if not exists idx_movements_installment_group on public.movements(installment_group_id);
+create index if not exists idx_movements_invoice_month on public.movements(invoice_month);
 
 -- RLS para Movimentações
 alter table public.movements enable row level security;
@@ -59,7 +85,7 @@ create policy "Usuários podem gerenciar suas próprias movimentações" on publ
   for all using (auth.uid() = user_id);
 
 
--- 3. Tabela de Metas Financeiras
+-- 4. Tabela de Metas Financeiras
 create table public.goals (
   id uuid default gen_random_uuid() primary key,
   user_id uuid references auth.users on delete cascade not null default auth.uid(),
@@ -68,6 +94,9 @@ create table public.goals (
   target numeric not null,
   period text not null,
   description text,
+  reset_monthly boolean default false,
+  last_reset_month text,
+  card_id uuid references public.credit_cards on delete set null,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
@@ -78,7 +107,25 @@ create policy "Usuários podem gerenciar suas próprias metas" on public.goals
   for all using (auth.uid() = user_id);
 
 
--- 4. Tabela de Reserva de Emergência (Histórico Mensal)
+-- 5. Tabela de Histórico de Metas
+create table public.goal_history (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references auth.users on delete cascade not null default auth.uid(),
+  goal_id uuid references public.goals on delete cascade not null,
+  goal_title text not null,
+  month text not null,
+  current numeric not null,
+  target numeric not null,
+  achieved boolean not null default false,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+alter table public.goal_history enable row level security;
+
+create policy "Usuários podem gerenciar seu histórico de metas" on public.goal_history
+  for all using (auth.uid() = user_id);
+
+-- 6. Tabela de Reserva de Emergência (Histórico Mensal)
 create table public.emergency_savings (
   id uuid default gen_random_uuid() primary key,
   user_id uuid references auth.users on delete cascade not null default auth.uid(),
@@ -94,7 +141,7 @@ create policy "Usuários podem gerenciar sua própria reserva de emergência" on
   for all using (auth.uid() = user_id);
 
 
--- 5. Inserir metas padrão automáticas para novos usuários (opcional, pode ser feito via trigger ou app)
+-- 7. Inserir metas padrão automáticas para novos usuários (opcional, pode ser feito via trigger ou app)
 create or replace function public.seed_user_defaults()
 returns trigger as $$
 begin
