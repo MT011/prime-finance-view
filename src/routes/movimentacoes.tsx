@@ -621,7 +621,7 @@ function MovimentacoesPage() {
           setIsDeleteDialogOpen(open);
           if (!open) setMovementToDelete(null);
         }}>
-          <DialogContent className="glass-card sm:max-w-md">
+          <DialogContent className="glass-card sm:max-w-md max-h-[85dvh] overflow-y-auto">
             <DialogHeader>
               <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10">
                 <AlertTriangle className="h-6 w-6 text-destructive" />
@@ -674,7 +674,7 @@ function MovimentacoesPage() {
           setIsEditDialogOpen(open);
           if (!open) setMovementToEdit(null);
         }}>
-          <DialogContent className="glass-card sm:max-w-md">
+          <DialogContent className="glass-card sm:max-w-md max-h-[85dvh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="text-lg">Editar Movimentação</DialogTitle>
             </DialogHeader>

@@ -160,7 +160,7 @@ export function NewMovementFab() {
           <Plus className="h-6 w-6" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="glass-card sm:max-w-md">
+      <DialogContent className="glass-card sm:max-w-md max-h-[85dvh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-lg">Nova Movimentação</DialogTitle>
         </DialogHeader>

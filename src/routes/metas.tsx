@@ -478,7 +478,7 @@ function MetasPage() {
         setIsDepositDialogOpen(open);
         if (!open) setDepositGoal(null);
       }}>
-        <DialogContent className="glass-card sm:max-w-sm">
+        <DialogContent className="glass-card sm:max-w-sm max-h-[85dvh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Adicionar depósito</DialogTitle>
             <DialogDescription>
@@ -518,7 +518,7 @@ function MetasPage() {
       </Dialog>
 
       <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!open) resetForm(); }}>
-        <DialogContent className="glass-card sm:max-w-md">
+        <DialogContent className="glass-card sm:max-w-md max-h-[85dvh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{selectedGoal ? "Editar Meta" : "Nova Meta"}</DialogTitle>
             <DialogDescription>
