@@ -1,7 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
-import { getStoredSession } from "@/lib/auth-storage";
-import { getDemoDataStore, saveDemoDataStore } from "@/lib/demo-data-storage";
 
 export interface Movement {
   id: string;
@@ -66,22 +64,24 @@ export interface EmergencySaving {
   created_at: string;
 }
 
+export interface Category {
+  id: string;
+  user_id: string;
+  name: string;
+  type: "receita" | "despesa";
+  created_at: string;
+}
+
 async function getUserId() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Usuário não autenticado");
   return user.id;
 }
 
-// 1. Hook para buscar movimentações
 export function useMovements() {
   return useQuery<Movement[]>({
     queryKey: ["movements"],
     queryFn: async () => {
-      const storedSession = getStoredSession();
-      if (storedSession?.demo) {
-        return getDemoDataStore().movements || [];
-      }
-
       const userId = await getUserId();
       const { data, error } = await supabase
         .from("movements")
@@ -95,7 +95,6 @@ export function useMovements() {
   });
 }
 
-// 2. Hook para adicionar nova movimentação (suporta parcelamento)
 export function useAddMovement() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -103,20 +102,6 @@ export function useAddMovement() {
       movement: Omit<Movement, "id" | "user_id" | "created_at"> | Omit<Movement, "id" | "user_id" | "created_at">[],
     ) => {
       const items = Array.isArray(movement) ? movement : [movement];
-      const storedSession = getStoredSession();
-
-      if (storedSession?.demo) {
-        const store = getDemoDataStore();
-        const newMovements = items.map((m) => ({
-          id: crypto.randomUUID(),
-          user_id: "demo-user",
-          created_at: new Date().toISOString(),
-          ...m,
-        })) as Movement[];
-        saveDemoDataStore({ ...store, movements: [...newMovements, ...store.movements] });
-        return items.length === 1 ? newMovements[0] : newMovements;
-      }
-
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
@@ -157,26 +142,15 @@ export function useAddMovement() {
   });
 }
 
-// 3. Hook para excluir movimentação (suporta parcelas)
 export function useDeleteMovement() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (input: string | { id: string; installmentGroupId?: string; deleteAll?: boolean }) => {
-      const storedSession = getStoredSession();
       const id = typeof input === "string" ? input : input.id;
       const installmentGroupId = typeof input === "string" ? undefined : input.installmentGroupId;
       const deleteAll = typeof input === "string" ? false : input.deleteAll;
-
-      if (storedSession?.demo) {
-        const store = getDemoDataStore();
-        const updatedMovements = deleteAll && installmentGroupId
-          ? store.movements.filter((m: any) => m.installment_group_id !== installmentGroupId)
-          : store.movements.filter((m: any) => m.id !== id);
-        saveDemoDataStore({ ...store, movements: updatedMovements });
-        return;
-      }
-
       const userId = await getUserId();
+
       if (deleteAll && installmentGroupId) {
         const { error } = await supabase
           .from("movements")
@@ -199,7 +173,6 @@ export function useDeleteMovement() {
   });
 }
 
-// 3.5 Hook para atualizar movimentação (suporta parcelas)
 export function useUpdateMovement() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -207,24 +180,8 @@ export function useUpdateMovement() {
       input: (Partial<Movement> & { id: string }) | (Partial<Movement> & { id: string; editAllInstallments?: boolean; installmentGroupId?: string }),
     ) => {
       const { id, editAllInstallments, installmentGroupId, ...data } = input as any;
-      const storedSession = getStoredSession();
-
-      if (storedSession?.demo) {
-        const store = getDemoDataStore();
-        const updatedMovements = editAllInstallments && installmentGroupId
-          ? store.movements.map((movement: any) =>
-              movement.installment_group_id === installmentGroupId
-                ? { ...movement, ...data }
-                : movement,
-            )
-          : store.movements.map((movement: any) =>
-              movement.id === id ? { ...movement, ...data } : movement,
-            );
-        saveDemoDataStore({ ...store, movements: updatedMovements });
-        return;
-      }
-
       const userId = await getUserId();
+
       if (editAllInstallments && installmentGroupId) {
         const { error } = await supabase
           .from("movements")
@@ -247,16 +204,10 @@ export function useUpdateMovement() {
   });
 }
 
-// 4. Hook para buscar cartões de crédito
 export function useCreditCards() {
   return useQuery<CreditCard[]>({
     queryKey: ["credit_cards"],
     queryFn: async () => {
-      const storedSession = getStoredSession();
-      if (storedSession?.demo) {
-        return getDemoDataStore().creditCards || [];
-      }
-
       const userId = await getUserId();
       const { data, error } = await supabase
         .from("credit_cards")
@@ -270,27 +221,10 @@ export function useCreditCards() {
   });
 }
 
-// 5. Hook para criar cartão de crédito
 export function useCreateCreditCard() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ name, limit, closing_day, due_day }: { name: string; limit: number; closing_day: number; due_day: number }) => {
-      const storedSession = getStoredSession();
-      if (storedSession?.demo) {
-        const store = getDemoDataStore();
-        const newCard = {
-          id: crypto.randomUUID(),
-          user_id: "demo-user",
-          name,
-          limit,
-          closing_day,
-          due_day,
-          created_at: new Date().toISOString(),
-        } as CreditCard;
-        saveDemoDataStore({ ...store, creditCards: [newCard, ...store.creditCards] });
-        return newCard;
-      }
-
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
@@ -309,18 +243,10 @@ export function useCreateCreditCard() {
   });
 }
 
-// 6. Hook para excluir cartão de crédito
 export function useDeleteCreditCard() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const storedSession = getStoredSession();
-      if (storedSession?.demo) {
-        const store = getDemoDataStore();
-        saveDemoDataStore({ ...store, creditCards: store.creditCards.filter((card) => card.id !== id) });
-        return;
-      }
-
       const userId = await getUserId();
       const { error } = await supabase.from("credit_cards").delete().eq("id", id).eq("user_id", userId);
       if (error) throw error;
@@ -331,7 +257,6 @@ export function useDeleteCreditCard() {
   });
 }
 
-// 7. Hook para buscar metas
 function getCalendarMonthKey(): string {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
@@ -361,52 +286,10 @@ function getCycleKey(goal: Goal, cards: any[]): string {
   return getCalendarMonthKey();
 }
 
-function saveGoalHistory(goal: Goal, period: string) {
-  const historyEntry = {
-    id: crypto.randomUUID(),
-    goal_id: goal.id,
-    goal_title: goal.title,
-    month: period,
-    current: goal.current,
-    target: goal.target,
-    achieved: goal.current >= goal.target,
-    created_at: new Date().toISOString(),
-  };
-  const store = getDemoDataStore();
-  saveDemoDataStore({
-    ...store,
-    goalHistory: [...store.goalHistory, historyEntry],
-    goals: store.goals.map((g: any) =>
-      g.id === goal.id ? { ...g, current: 0, last_reset_month: period } : g,
-    ),
-  });
-}
-
-function applyMonthlyResets(goals: Goal[], cards: any[]): Goal[] {
-  const updated = goals.map((goal) => {
-    if (!goal.reset_monthly) return goal;
-    const currentKey = getCycleKey(goal, cards);
-    if (goal.last_reset_month !== currentKey) {
-      saveGoalHistory(goal, goal.last_reset_month || currentKey);
-      return { ...goal, current: 0, last_reset_month: currentKey };
-    }
-    return goal;
-  });
-  return updated;
-}
-
 export function useGoals() {
   return useQuery<Goal[]>({
     queryKey: ["goals"],
     queryFn: async () => {
-      const storedSession = getStoredSession();
-      if (storedSession?.demo) {
-        const store = getDemoDataStore();
-        const goals = store.goals || [];
-        const cards = store.creditCards || [];
-        return applyMonthlyResets(goals, cards);
-      }
-
       const userId = await getUserId();
       const { data: goalsData, error: goalsError } = await supabase
         .from("goals")
@@ -452,7 +335,8 @@ export function useGoals() {
           const { error: updateError } = await supabase
             .from("goals")
             .update({ current: 0, last_reset_month: currentKey })
-            .eq("id", goal.id);
+            .eq("id", goal.id)
+            .eq("user_id", userId);
           if (updateError) console.error("Erro ao resetar meta:", updateError);
         }
       }
@@ -469,23 +353,10 @@ export function useGoals() {
   });
 }
 
-// 5. Hook para atualizar meta
 export function useUpdateGoal() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, title, current, target, description, reset_monthly, last_reset_month, card_id }: { id: string; title?: string; current?: number; target?: number; description?: string | null; reset_monthly?: boolean; last_reset_month?: string | null; card_id?: string | null }) => {
-      const storedSession = getStoredSession();
-      if (storedSession?.demo) {
-        const store = getDemoDataStore();
-        const updatedGoals = store.goals.map((goal) =>
-          goal.id === id
-            ? { ...goal, ...(title !== undefined ? { title } : {}), ...(current !== undefined ? { current } : {}), ...(target !== undefined ? { target } : {}), ...(description !== undefined ? { description } : {}), ...(reset_monthly !== undefined ? { reset_monthly } : {}), ...(last_reset_month !== undefined ? { last_reset_month } : {}), ...(card_id !== undefined ? { card_id } : {}) }
-            : goal,
-        );
-        saveDemoDataStore({ ...store, goals: updatedGoals });
-        return updatedGoals.find((goal) => goal.id === id);
-      }
-
       const updateData: Record<string, any> = {};
       if (title !== undefined) updateData.title = title;
       if (current !== undefined) updateData.current = current;
@@ -513,31 +384,10 @@ export function useUpdateGoal() {
   });
 }
 
-// 6. Hook para criar nova meta
 export function useCreateGoal() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ title, current, target, period, description, reset_monthly, card_id }: { title: string; current: number; target: number; period: string; description?: string | null; reset_monthly?: boolean; card_id?: string | null }) => {
-      const storedSession = getStoredSession();
-      if (storedSession?.demo) {
-        const store = getDemoDataStore();
-        const newGoal = {
-          id: crypto.randomUUID(),
-          user_id: "demo-user",
-          title,
-          current,
-          target,
-          period,
-          description,
-          reset_monthly: reset_monthly ?? false,
-          last_reset_month: null,
-          card_id: card_id || null,
-          created_at: new Date().toISOString(),
-        } as Goal;
-        saveDemoDataStore({ ...store, goals: [newGoal, ...store.goals] });
-        return newGoal;
-      }
-
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
@@ -556,18 +406,10 @@ export function useCreateGoal() {
   });
 }
 
-// 7. Hook para excluir meta
 export function useDeleteGoal() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const storedSession = getStoredSession();
-      if (storedSession?.demo) {
-        const store = getDemoDataStore();
-        saveDemoDataStore({ ...store, goals: store.goals.filter((goal) => goal.id !== id) });
-        return;
-      }
-
       const userId = await getUserId();
       const { error } = await supabase.from("goals").delete().eq("id", id).eq("user_id", userId);
       if (error) throw error;
@@ -578,16 +420,10 @@ export function useDeleteGoal() {
   });
 }
 
-// 8. Hook para buscar histórico da reserva de emergência
 export function useEmergencySavings() {
   return useQuery<EmergencySaving[]>({
     queryKey: ["emergency_savings"],
     queryFn: async () => {
-      const storedSession = getStoredSession();
-      if (storedSession?.demo) {
-        return getDemoDataStore().emergencySavings || [];
-      }
-
       const userId = await getUserId();
       const { data, error } = await supabase
         .from("emergency_savings")
@@ -601,35 +437,13 @@ export function useEmergencySavings() {
   });
 }
 
-// 7. Hook para salvar (inserir ou atualizar) reserva de emergência para um mês específico
 export function useSaveEmergencySavings() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ month, value }: { month: string; value: number }) => {
-      const storedSession = getStoredSession();
-      if (storedSession?.demo) {
-        const store = getDemoDataStore();
-        const existing = store.emergencySavings.find((entry) => entry.month === month);
-        const updatedEntries = existing
-          ? store.emergencySavings.map((entry) => (entry.month === month ? { ...entry, value } : entry))
-          : [
-              ...store.emergencySavings,
-              {
-                id: crypto.randomUUID(),
-                user_id: "demo-user",
-                month,
-                value,
-                created_at: new Date().toISOString(),
-              },
-            ];
-        saveDemoDataStore({ ...store, emergencySavings: updatedEntries });
-        return;
-      }
-
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
-      // Verificar se já existe registro para o mês
       const { data: existing } = await supabase
         .from("emergency_savings")
         .select("id")
@@ -639,14 +453,12 @@ export function useSaveEmergencySavings() {
 
       let error;
       if (existing?.id) {
-        // Atualizar
         ({ error } = await supabase
           .from("emergency_savings")
           .update({ value })
           .eq("id", existing.id)
           .eq("user_id", user.id));
       } else {
-        // Inserir
         ({ error } = await supabase
           .from("emergency_savings")
           .insert([{ user_id: user.id, month, value }]));
@@ -660,16 +472,10 @@ export function useSaveEmergencySavings() {
   });
 }
 
-// 9. Hook para buscar histórico de metas
 export function useGoalHistory() {
   return useQuery<GoalHistory[]>({
     queryKey: ["goal_history"],
     queryFn: async () => {
-      const storedSession = getStoredSession();
-      if (storedSession?.demo) {
-        return getDemoDataStore().goalHistory || [];
-      }
-
       const userId = await getUserId();
       const { data, error } = await supabase
         .from("goal_history")
@@ -682,3 +488,22 @@ export function useGoalHistory() {
     },
   });
 }
+
+export function useCategories() {
+  return useQuery<Category[]>({
+    queryKey: ["categories"],
+    queryFn: async () => {
+      const userId = await getUserId();
+      const { data, error } = await supabase
+        .from("categories")
+        .select("*")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: true });
+
+      if (error) throw error;
+      return data || [];
+    },
+  });
+}
+
+

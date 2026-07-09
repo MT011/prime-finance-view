@@ -15,7 +15,7 @@ import { useCreateCreditCard, useCreditCards, useDeleteCreditCard } from "@/hook
 import { useState } from "react";
 import { Loader2, Plus, Trash2, CreditCard as CreditCardIcon } from "lucide-react";
 import { toast } from "sonner";
-import { accounts } from "@/lib/mock-data";
+import { accounts } from "@/lib/accounts";
 
 export const Route = createFileRoute("/cartoes")({
   head: () => ({

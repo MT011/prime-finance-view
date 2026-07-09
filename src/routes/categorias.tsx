@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { AppHeader } from "@/components/app-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,8 +8,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { addCategory, getStoredCategories, removeCategory, type CategoryType } from "@/lib/categories-storage";
-import { Pencil, Plus, Trash2, TrendingDown, TrendingUp } from "lucide-react";
+import { Pencil, Plus, Trash2, TrendingDown, TrendingUp, Loader2 } from "lucide-react";
+import { useCategories } from "@/hooks/queries";
+import { addCategory as addCategoryToDb, removeCategory as removeCategoryFromDb } from "@/lib/categories-storage";
 
 export const Route = createFileRoute("/categorias")({
   head: () => ({
@@ -74,34 +75,62 @@ function CategoriaList({
 }
 
 function CategoriasPage() {
-  const [categories, setCategories] = useState(getStoredCategories());
+  const { data: categories, isLoading, refetch } = useCategories();
   const [open, setOpen] = useState(false);
-  const [type, setType] = useState<CategoryType>("receita");
+  const [type, setType] = useState<"receita" | "despesa">("receita");
   const [name, setName] = useState("");
+  const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    setCategories(getStoredCategories());
-  }, []);
+  const receitas = (categories || []).filter((c) => c.type === "receita").map((c) => c.name);
+  const despesas = (categories || []).filter((c) => c.type === "despesa").map((c) => c.name);
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     const trimmed = name.trim();
     if (!trimmed) {
       toast.error("Digite o nome da categoria.");
       return;
     }
 
-    const next = addCategory(type, trimmed);
-    setCategories(next);
-    setName("");
-    setOpen(false);
-    toast.success("Categoria criada com sucesso!");
+    setSaving(true);
+    try {
+      await addCategoryToDb(type, trimmed);
+      refetch();
+      setName("");
+      setOpen(false);
+      toast.success("Categoria criada com sucesso!");
+    } catch {
+      toast.error("Erro ao criar categoria.");
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const handleRemove = (categoryType: CategoryType, categoryName: string) => {
-    const next = removeCategory(categoryType, categoryName);
-    setCategories(next);
-    toast.success("Categoria removida.");
+  const handleRemove = async (categoryType: "receita" | "despesa", categoryName: string) => {
+    setSaving(true);
+    try {
+      await removeCategoryFromDb(categoryType, categoryName);
+      refetch();
+      toast.success("Categoria removida.");
+    } catch {
+      toast.error("Erro ao remover categoria.");
+    } finally {
+      setSaving(false);
+    }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen flex-col">
+        <AppHeader title="Categorias" subtitle="Organize suas receitas e despesas" />
+        <main className="flex-1 flex items-center justify-center p-8">
+          <div className="flex flex-col items-center gap-2">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <span className="text-sm text-muted-foreground">Carregando categorias...</span>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -110,7 +139,7 @@ function CategoriasPage() {
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <CategoriaList
             title="Receitas"
-            items={categories.receitas}
+            items={receitas}
             color="success"
             icon={<TrendingUp className="h-4 w-4" />}
             onAdd={() => {
@@ -121,7 +150,7 @@ function CategoriasPage() {
           />
           <CategoriaList
             title="Despesas"
-            items={categories.despesas}
+            items={despesas}
             color="danger"
             icon={<TrendingDown className="h-4 w-4" />}
             onAdd={() => {
@@ -150,14 +179,17 @@ function CategoriasPage() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Ex.: Freelance"
+                disabled={saving}
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)}>
+            <Button variant="outline" onClick={() => setOpen(false)} disabled={saving}>
               Cancelar
             </Button>
-            <Button onClick={handleAdd}>Salvar</Button>
+            <Button onClick={handleAdd} disabled={saving}>
+              {saving ? "Salvando..." : "Salvar"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

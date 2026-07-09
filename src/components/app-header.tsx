@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/lib/supabase";
-import { getStoredSession } from "@/lib/auth-storage";
 import { useEffect, useState } from "react";
 
 type Props = {
@@ -28,11 +27,6 @@ export function AppHeader({ greeting = false, title, subtitle }: Props) {
   const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
-    const storedSession = getStoredSession();
-    if (storedSession?.demo) {
-      setUser(storedSession.user || null);
-      return;
-    }
     supabase.auth.getUser().then(({ data: { user } }) => {
       setUser(user);
     });

@@ -6,7 +6,6 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Camera, LogOut, Pencil, Mail, ShieldCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/lib/supabase";
-import { getStoredSession } from "@/lib/auth-storage";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
@@ -25,11 +24,6 @@ function PerfilPage() {
   const [userId, setUserId] = useState<string>("");
 
   useEffect(() => {
-    const storedSession = getStoredSession();
-    if (storedSession?.demo) {
-      setUser(storedSession.user || null);
-      return;
-    }
     supabase.auth.getUser().then(({ data: { user } }) => {
       setUser(user);
       setUserId(user?.id || "");

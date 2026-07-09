@@ -32,11 +32,10 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { accounts, categoriesList } from "@/lib/mock-data";
-import { getStoredCategories } from "@/lib/categories-storage";
+import { accounts } from "@/lib/accounts";
 import { useValueVisibility } from "@/lib/value-visibility";
 import { ArrowLeft, ChevronLeft, ChevronRight, CreditCard, Loader2, Search, Trash2, AlertTriangle, Pencil } from "lucide-react";
-import { useMovements, useDeleteMovement, useUpdateMovement, useCreditCards } from "@/hooks/queries";
+import { useMovements, useDeleteMovement, useUpdateMovement, useCreditCards, useCategories } from "@/hooks/queries";
 import { toast } from "sonner";
 import { getCreditCardInvoiceInfo, getCurrentInvoiceMonthKey, getNextInvoiceMonthKey, getInvoiceMonthLabel } from "@/lib/credit-cards";
 
@@ -205,7 +204,11 @@ function MovimentacoesPage() {
   const [editSaving, setEditSaving] = useState(false);
   const [editMode, setEditMode] = useState<"single" | "all">("single");
   const updateMovementMutation = useUpdateMovement();
-  const storedCategories = getStoredCategories();
+  const { data: categoriesData } = useCategories();
+  const storedCategories = {
+    receitas: (categoriesData || []).filter((c) => c.type === "receita").map((c) => c.name),
+    despesas: (categoriesData || []).filter((c) => c.type === "despesa").map((c) => c.name),
+  };
 
   const handleEditRequest = (movement: any) => {
     setMovementToEdit(movement);
@@ -324,7 +327,7 @@ function MovimentacoesPage() {
     }
   };
 
-  const allCategories = [...categoriesList.receitas, ...categoriesList.despesas];
+  const allCategories = [...storedCategories.receitas, ...storedCategories.despesas];
 
   const filtered = useMemo(() => {
     return movements.filter((m) => {

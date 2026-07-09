@@ -26,7 +26,6 @@ import {
 } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { supabase } from "@/lib/supabase";
-import { getStoredSession, clearStoredSession } from "@/lib/auth-storage";
 import { useEffect, useState } from "react";
 
 const items = [
@@ -46,12 +45,6 @@ export function AppSidebar() {
   const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
-    const storedSession = getStoredSession();
-    if (storedSession?.demo) {
-      setUser(storedSession.user || null);
-      return;
-    }
-
     supabase.auth.getUser().then(({ data: { user } }) => {
       setUser(user);
     });
@@ -64,7 +57,6 @@ export function AppSidebar() {
   }, []);
 
   const handleLogout = async () => {
-    clearStoredSession();
     await supabase.auth.signOut();
     window.location.reload();
   };

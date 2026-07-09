@@ -19,7 +19,6 @@ import { Toaster } from "@/components/ui/sonner";
 import { supabase } from "../lib/supabase";
 import { AuthScreen } from "../components/auth-screen";
 import { Loader2 } from "lucide-react";
-import { getStoredSession, clearStoredSession } from "../lib/auth-storage";
 
 function NotFoundComponent() {
   return (
@@ -156,21 +155,11 @@ function RootComponent() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const storedSession = getStoredSession();
-
-    if (storedSession?.demo) {
-      setSession(storedSession);
-      setLoading(false);
-      return;
-    }
-
-    // Check initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setLoading(false);
     });
 
-    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setLoading(false);

@@ -6,12 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Wallet, Sparkles, Loader2 } from "lucide-react";
-import { saveStoredSession, clearStoredSession, isDemoCredential } from "@/lib/auth-storage";
 
 export function AuthScreen() {
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
 
@@ -19,39 +18,22 @@ export function AuthScreen() {
     e.preventDefault();
     setLoading(true);
 
-    // Converte o nome de usuário para e-mail interno
-    const email = `${username.trim().toLowerCase()}@dash.app`;
-
     try {
       if (isLogin) {
-        if (isDemoCredential(username, password)) {
-          saveStoredSession({
-            user: {
-              email,
-              user_metadata: { full_name: "Marco" },
-            },
-            demo: true,
-          });
-          toast.success("Login realizado com sucesso!");
-          window.location.reload();
-          return;
-        }
-
         const { error } = await supabase.auth.signInWithPassword({
-          email,
+          email: email.trim().toLowerCase(),
           password,
         });
 
         if (error) throw error;
-        saveStoredSession({ user: { email }, supabase: true });
         toast.success("Login realizado com sucesso!");
       } else {
         const { error } = await supabase.auth.signUp({
-          email,
+          email: email.trim().toLowerCase(),
           password,
           options: {
             data: {
-              full_name: fullName || username,
+              full_name: fullName || email.split("@")[0],
             },
           },
         });
@@ -70,7 +52,6 @@ export function AuthScreen() {
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-primary/10 via-background to-background px-4 py-12">
-      {/* Decorative blurred spots */}
       <div className="absolute top-1/4 left-1/4 -z-10 h-72 w-72 rounded-full bg-primary/10 blur-3xl" />
       <div className="absolute bottom-1/4 right-1/4 -z-10 h-72 w-72 rounded-full bg-info/10 blur-3xl" />
 
@@ -88,7 +69,6 @@ export function AuthScreen() {
         </div>
 
         <Card className="glass-card border-border/40 shadow-2xl relative overflow-hidden backdrop-blur-md">
-          {/* Subtle line decoration */}
           <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
 
           <CardHeader className="space-y-1">
@@ -121,16 +101,16 @@ export function AuthScreen() {
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="username">Usuário</Label>
+                <Label htmlFor="email">E-mail</Label>
                 <Input
-                  id="username"
-                  type="text"
-                  placeholder="nome de usuário"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
+                  id="email"
+                  type="email"
+                  placeholder="seu@email.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   required
                   disabled={loading}
-                  autoComplete="username"
+                  autoComplete="email"
                   className="bg-background/30 focus-visible:ring-primary border-border/60"
                 />
               </div>

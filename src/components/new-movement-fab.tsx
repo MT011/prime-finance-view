@@ -25,8 +25,8 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { accounts } from "@/lib/mock-data";
-import { getStoredCategories } from "@/lib/categories-storage";
+import { accounts } from "@/lib/accounts";
+import { useCategories } from "@/hooks/queries";
 import { toast } from "sonner";
 
 export function NewMovementFab() {
@@ -45,8 +45,10 @@ export function NewMovementFab() {
 
   const addMovementMutation = useAddMovement();
   const { data: creditCards = [] } = useCreditCards();
-  const storedCategories = getStoredCategories();
-  const availableCategories = type === "receita" ? storedCategories.receitas : storedCategories.despesas;
+  const { data: categoriesData } = useCategories();
+  const availableCategories = (categoriesData || [])
+    .filter((c) => c.type === type)
+    .map((c) => c.name);
 
   const handleSave = async () => {
     const numAmount = parseFloat(amount.replace(",", "."));
