@@ -166,7 +166,25 @@ drop policy if exists "Usuários podem gerenciar suas próprias categorias" on p
 create policy "Usuários podem gerenciar suas próprias categorias" on public.categories
   for all using (auth.uid() = user_id);
 
--- 8. Inserir metas padrão e categorias automáticas para novos usuários
+-- 8. Tabela de Nomes de Cartões Personalizados
+create table if not exists public.card_names (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references auth.users on delete cascade not null default auth.uid(),
+  name text not null,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  unique(user_id, name)
+);
+
+create index if not exists idx_card_names_user on public.card_names(user_id);
+
+alter table public.card_names enable row level security;
+
+drop policy if exists "Usuários podem gerenciar seus próprios nomes de cartão" on public.card_names;
+create policy "Usuários podem gerenciar seus próprios nomes de cartão" on public.card_names
+  for all using (auth.uid() = user_id);
+
+
+-- 9. Inserir metas padrão e categorias automáticas para novos usuários
 create or replace function public.seed_user_defaults()
 returns trigger as $$
 begin

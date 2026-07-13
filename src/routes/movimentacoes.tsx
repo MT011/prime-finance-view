@@ -464,8 +464,7 @@ function MovimentacoesPage() {
                 <div className="space-y-4">
                   {(() => {
                     const months = getInvoiceMonthsFromMovements(movements, selectedCard.id)
-                      .filter((m) => m !== getCurrentInvoiceMonthKey(selectedCard) && m !== getNextInvoiceMonthKey(selectedCard))
-                      .reverse();
+                      .filter((m) => m !== getCurrentInvoiceMonthKey(selectedCard) && m !== getNextInvoiceMonthKey(selectedCard));
                     if (months.length === 0) {
                       return (
                         <Card className="glass-card">

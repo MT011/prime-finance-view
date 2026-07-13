@@ -73,7 +73,9 @@ export interface Category {
 }
 
 async function getUserId() {
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) throw new Error("Usuário não autenticado");
   return user.id;
 }
@@ -99,10 +101,14 @@ export function useAddMovement() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (
-      movement: Omit<Movement, "id" | "user_id" | "created_at"> | Omit<Movement, "id" | "user_id" | "created_at">[],
+      movement:
+        | Omit<Movement, "id" | "user_id" | "created_at">
+        | Omit<Movement, "id" | "user_id" | "created_at">[],
     ) => {
       const items = Array.isArray(movement) ? movement : [movement];
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
       const payloads = items.map((m) => ({
@@ -117,20 +123,21 @@ export function useAddMovement() {
         ...(m.total_installments ? { total_installments: m.total_installments } : {}),
       }));
 
-      let { data, error } = await supabase
-        .from("movements")
-        .insert(payloads)
-        .select();
+      let { data, error } = await supabase.from("movements").insert(payloads).select();
 
       if (error) {
         const fallbackPayloads = payloads.map((p) => {
-          const { nature, expense_type, installment_group_id, installment_number, total_installments, ...rest } = p as any;
+          const {
+            nature,
+            expense_type,
+            installment_group_id,
+            installment_number,
+            total_installments,
+            ...rest
+          } = p as any;
           return rest;
         });
-        ({ data, error } = await supabase
-          .from("movements")
-          .insert(fallbackPayloads)
-          .select());
+        ({ data, error } = await supabase.from("movements").insert(fallbackPayloads).select());
       }
 
       if (error) throw error;
@@ -145,7 +152,9 @@ export function useAddMovement() {
 export function useDeleteMovement() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (input: string | { id: string; installmentGroupId?: string; deleteAll?: boolean }) => {
+    mutationFn: async (
+      input: string | { id: string; installmentGroupId?: string; deleteAll?: boolean },
+    ) => {
       const id = typeof input === "string" ? input : input.id;
       const installmentGroupId = typeof input === "string" ? undefined : input.installmentGroupId;
       const deleteAll = typeof input === "string" ? false : input.deleteAll;
@@ -177,7 +186,13 @@ export function useUpdateMovement() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (
-      input: (Partial<Movement> & { id: string }) | (Partial<Movement> & { id: string; editAllInstallments?: boolean; installmentGroupId?: string }),
+      input:
+        | (Partial<Movement> & { id: string })
+        | (Partial<Movement> & {
+            id: string;
+            editAllInstallments?: boolean;
+            installmentGroupId?: string;
+          }),
     ) => {
       const { id, editAllInstallments, installmentGroupId, ...data } = input as any;
       const userId = await getUserId();
@@ -224,8 +239,20 @@ export function useCreditCards() {
 export function useCreateCreditCard() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ name, limit, closing_day, due_day }: { name: string; limit: number; closing_day: number; due_day: number }) => {
-      const { data: { user } } = await supabase.auth.getUser();
+    mutationFn: async ({
+      name,
+      limit,
+      closing_day,
+      due_day,
+    }: {
+      name: string;
+      limit: number;
+      closing_day: number;
+      due_day: number;
+    }) => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
       const { data, error } = await supabase
@@ -248,11 +275,93 @@ export function useDeleteCreditCard() {
   return useMutation({
     mutationFn: async (id: string) => {
       const userId = await getUserId();
-      const { error } = await supabase.from("credit_cards").delete().eq("id", id).eq("user_id", userId);
+      const { error } = await supabase
+        .from("credit_cards")
+        .delete()
+        .eq("id", id)
+        .eq("user_id", userId);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["credit_cards"] });
+    },
+  });
+}
+
+export interface CardName {
+  id: string;
+  user_id: string;
+  name: string;
+  created_at: string;
+}
+
+export function useCardNames() {
+  return useQuery<CardName[]>({
+    queryKey: ["card_names"],
+    queryFn: async () => {
+      const userId = await getUserId();
+      const { data, error } = await supabase
+        .from("card_names")
+        .select("*")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: true });
+
+      if (error) throw error;
+      return data || [];
+    },
+  });
+}
+
+export function useCreateCardName() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (name: string) => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) throw new Error("Usuário não autenticado");
+
+      const trimmed = name.trim();
+      if (!trimmed) throw new Error("Nome não pode ser vazio");
+
+      const { data: existing } = await supabase
+        .from("card_names")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("name", trimmed)
+        .maybeSingle();
+
+      if (existing) return existing;
+
+      const { data, error } = await supabase
+        .from("card_names")
+        .insert([{ user_id: user.id, name: trimmed }])
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["card_names"] });
+    },
+  });
+}
+
+export function useDeleteCardName() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const userId = await getUserId();
+      const { error } = await supabase
+        .from("card_names")
+        .delete()
+        .eq("id", id)
+        .eq("user_id", userId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["card_names"] });
     },
   });
 }
@@ -316,9 +425,8 @@ export function useGoals() {
       if (toUpdate.length > 0) {
         for (const goal of toUpdate) {
           const currentKey = getCycleKey(goal, cards);
-          const { error: histError } = await supabase
-            .from("goal_history")
-            .insert([{
+          const { error: histError } = await supabase.from("goal_history").insert([
+            {
               user_id: userId,
               goal_id: goal.id,
               goal_title: goal.title,
@@ -326,7 +434,8 @@ export function useGoals() {
               current: goal.current,
               target: goal.target,
               achieved: goal.current >= goal.target,
-            }]);
+            },
+          ]);
           if (histError) console.error("Erro ao salvar histórico:", histError);
         }
 
@@ -356,7 +465,25 @@ export function useGoals() {
 export function useUpdateGoal() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, title, current, target, description, reset_monthly, last_reset_month, card_id }: { id: string; title?: string; current?: number; target?: number; description?: string | null; reset_monthly?: boolean; last_reset_month?: string | null; card_id?: string | null }) => {
+    mutationFn: async ({
+      id,
+      title,
+      current,
+      target,
+      description,
+      reset_monthly,
+      last_reset_month,
+      card_id,
+    }: {
+      id: string;
+      title?: string;
+      current?: number;
+      target?: number;
+      description?: string | null;
+      reset_monthly?: boolean;
+      last_reset_month?: string | null;
+      card_id?: string | null;
+    }) => {
       const updateData: Record<string, any> = {};
       if (title !== undefined) updateData.title = title;
       if (current !== undefined) updateData.current = current;
@@ -387,13 +514,33 @@ export function useUpdateGoal() {
 export function useCreateGoal() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ title, current, target, period, description, reset_monthly, card_id }: { title: string; current: number; target: number; period: string; description?: string | null; reset_monthly?: boolean; card_id?: string | null }) => {
-      const { data: { user } } = await supabase.auth.getUser();
+    mutationFn: async ({
+      title,
+      current,
+      target,
+      period,
+      description,
+      reset_monthly,
+      card_id,
+    }: {
+      title: string;
+      current: number;
+      target: number;
+      period: string;
+      description?: string | null;
+      reset_monthly?: boolean;
+      card_id?: string | null;
+    }) => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
       const { data, error } = await supabase
         .from("goals")
-        .insert([{ user_id: user.id, title, current, target, period, description, reset_monthly, card_id }])
+        .insert([
+          { user_id: user.id, title, current, target, period, description, reset_monthly, card_id },
+        ])
         .select()
         .single();
 
@@ -441,7 +588,9 @@ export function useSaveEmergencySavings() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ month, value }: { month: string; value: number }) => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
       const { data: existing } = await supabase
@@ -505,5 +654,3 @@ export function useCategories() {
     },
   });
 }
-
-

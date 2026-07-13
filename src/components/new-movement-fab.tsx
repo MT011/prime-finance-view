@@ -112,7 +112,11 @@ export function NewMovementFab() {
       } else {
         const invoiceInfo = selectedCard ? getCreditCardInvoiceInfo(date, selectedCard) : null;
 
-        await addMovementMutation.mutateAsync({
+        // Monta os movimentos a serem criados
+        const allMovements: any[] = [];
+
+        // Cria o movimento da data atual (ou do cartão)
+        const baseMovement: any = {
           date,
           description: description.trim(),
           category,
@@ -127,9 +131,81 @@ export function NewMovementFab() {
                 invoice_month: invoiceInfo?.monthKey || null,
               }
             : {}),
-        });
+        };
 
-        toast.success("Movimentação salva com sucesso!");
+        // Se for despesa fixa, gera para os próximos 12 meses
+        if (type === "despesa" && expenseType === "fixo") {
+          const startDate = new Date(date);
+          const startMonth = startDate.getMonth();
+          const startYear = startDate.getFullYear();
+
+          // Define o mês da fatura inicial com base na data escolhida
+          const initialInvoiceMonth = selectedCard
+            ? getCreditCardInvoiceInfo(date, selectedCard)?.monthKey
+            : null;
+
+          if (selectedCard) {
+            // Com cartão de crédito: usa o mês da fatura como referência
+            const [invYear, invMonth] = (initialInvoiceMonth || "2026-01").split("-").map(Number);
+
+            for (let offset = 0; offset < 12; offset++) {
+              const totalM = invMonth - 1 + offset;
+              const y = invYear + Math.floor(totalM / 12);
+              const m = (totalM % 12) + 1;
+
+              const invoiceMonthKey = `${y}-${String(m).padStart(2, "0")}`;
+              // Data do movimento = primeiro dia do mês da fatura
+              const movDate = `${invoiceMonthKey}-01`;
+
+              allMovements.push({
+                date: movDate,
+                description: description.trim(),
+                category,
+                account,
+                type: "despesa" as const,
+                amount: numAmount,
+                nature: nature as MovementNature,
+                expense_type: "fixo" as ExpenseType,
+                card_id: selectedCard.id,
+                invoice_month: invoiceMonthKey,
+              });
+            }
+          } else {
+            // Sem cartão: usa o mês civil como referência
+            for (let offset = 0; offset < 12; offset++) {
+              const totalM = startMonth + offset;
+              const y = startYear + Math.floor(totalM / 12);
+              const m = (totalM % 12) + 1;
+
+              const monthKey = `${y}-${String(m).padStart(2, "0")}`;
+              const day = Math.min(startDate.getDate(), new Date(y, m, 0).getDate());
+              const dStr = `${monthKey}-${String(day).padStart(2, "0")}`;
+
+              allMovements.push({
+                date: dStr,
+                description: description.trim(),
+                category,
+                account,
+                type: "despesa" as const,
+                amount: numAmount,
+                nature: nature as MovementNature,
+                expense_type: "fixo" as ExpenseType,
+                card_id: null,
+                invoice_month: null,
+              });
+            }
+          }
+        } else {
+          allMovements.push(baseMovement);
+        }
+
+        await addMovementMutation.mutateAsync(allMovements);
+
+        toast.success(
+          type === "despesa" && expenseType === "fixo"
+            ? "Despesa fixa salva para os próximos 12 meses!"
+            : "Movimentação salva com sucesso!"
+        );
       }
 
       // Reset form
