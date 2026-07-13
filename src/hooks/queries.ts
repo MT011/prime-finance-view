@@ -182,6 +182,24 @@ export function useDeleteMovement() {
   });
 }
 
+export function useBulkDeleteMovements() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (ids: string[]) => {
+      const userId = await getUserId();
+      const { error } = await supabase
+        .from("movements")
+        .delete()
+        .in("id", ids)
+        .eq("user_id", userId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["movements"] });
+    },
+  });
+}
+
 export function useUpdateMovement() {
   const queryClient = useQueryClient();
   return useMutation({
