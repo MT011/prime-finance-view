@@ -41,8 +41,19 @@ import {
 } from "recharts";
 import { useMovements, useGoals, useEmergencySavings, useCreditCards } from "@/hooks/queries";
 import { Loader2 } from "lucide-react";
-import { useMemo } from "react";
-import { getCurrentInvoiceMonthKey, getNextInvoiceMonthKey, getInvoiceMonthLabel } from "@/lib/credit-cards";
+import { useMemo, useState } from "react";
+import {
+  getCurrentInvoiceMonthKey,
+  getNextInvoiceMonthKey,
+  getInvoiceMonthLabel,
+} from "@/lib/credit-cards";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -110,9 +121,7 @@ function StatCard({
           <div className="flex items-center gap-1.5 text-xs">
             <span
               className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-medium ${
-                deltaPositive
-                  ? "bg-primary/15 text-primary"
-                  : "bg-destructive/15 text-destructive"
+                deltaPositive ? "bg-primary/15 text-primary" : "bg-destructive/15 text-destructive"
               }`}
             >
               {deltaPositive ? (
@@ -152,9 +161,7 @@ function ChartTooltip({ active, payload, label }: any) {
           />
           <span className="text-muted-foreground">{p.name}:</span>
           <span className="font-medium text-foreground">
-            {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(
-              p.value,
-            )}
+            {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(p.value)}
           </span>
         </div>
       ))}
@@ -220,7 +227,8 @@ function DashboardPage() {
     const eco = recMes - desMes;
     const ecoPrev = recPrev - desPrev;
 
-    const lastEmergencyValue = emergencySavings.length > 0 ? Number(emergencySavings[emergencySavings.length - 1].value) : 0;
+    const lastEmergencyValue =
+      emergencySavings.length > 0 ? Number(emergencySavings[emergencySavings.length - 1].value) : 0;
 
     const sortedGoals = [...goals].sort((a, b) => {
       const aDate = new Date(a.created_at || 0).getTime();
@@ -231,13 +239,21 @@ function DashboardPage() {
     const emergencyGoal = sortedGoals.find((g) => {
       const title = (g.title || "").toLowerCase();
       const period = (g.period || "").toLowerCase();
-      return title.includes("reserva") || title.includes("emergência") || period.includes("reserva");
+      return (
+        title.includes("reserva") || title.includes("emergência") || period.includes("reserva")
+      );
     });
-    const monthlyGoal = sortedGoals.find((g) => {
-      const title = (g.title || "").toLowerCase();
-      const period = (g.period || "").toLowerCase();
-      return title.includes("economia") || title.includes("mensal") || title.includes("meta") || period.includes("mensal");
-    }) || sortedGoals[0];
+    const monthlyGoal =
+      sortedGoals.find((g) => {
+        const title = (g.title || "").toLowerCase();
+        const period = (g.period || "").toLowerCase();
+        return (
+          title.includes("economia") ||
+          title.includes("mensal") ||
+          title.includes("meta") ||
+          period.includes("mensal")
+        );
+      }) || sortedGoals[0];
 
     const goalsCurrent = goals.reduce((sum, g) => sum + Number(g.current || 0), 0);
     const pat = saldo + goalsCurrent + (lastEmergencyValue || 0);
@@ -280,15 +296,33 @@ function DashboardPage() {
   }, [creditCards, movements]);
 
   const monthlyEvolution = useMemo(() => {
-    const monthsMap: Record<string, { receitas: number; despesas: number; despesas_imediatas: number }> = {};
-    const monthsShort = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+    const monthsMap: Record<
+      string,
+      { receitas: number; despesas: number; despesas_imediatas: number }
+    > = {};
+    const monthsShort = [
+      "Jan",
+      "Fev",
+      "Mar",
+      "Abr",
+      "Mai",
+      "Jun",
+      "Jul",
+      "Ago",
+      "Set",
+      "Out",
+      "Nov",
+      "Dez",
+    ];
     const currentYear = new Date().getFullYear();
 
     for (let i = 0; i < 12; i++) {
       monthsMap[monthsShort[i]] = { receitas: 0, despesas: 0, despesas_imediatas: 0 };
     }
 
-    const sortedMovements = [...movements].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    const sortedMovements = [...movements].sort(
+      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
+    );
 
     let runningBalance = 0;
     sortedMovements.forEach((m) => {
@@ -309,7 +343,7 @@ function DashboardPage() {
 
     return monthsShort.map((month) => {
       const data = monthsMap[month];
-      runningBalance += (data.receitas - data.despesas_imediatas);
+      runningBalance += data.receitas - data.despesas_imediatas;
       return {
         month,
         receitas: data.receitas,
@@ -326,7 +360,11 @@ function DashboardPage() {
 
     movements.forEach((m) => {
       const d = new Date(m.date);
-      if (m.type === "despesa" && d.getMonth() === currentMonth && d.getFullYear() === currentYear) {
+      if (
+        m.type === "despesa" &&
+        d.getMonth() === currentMonth &&
+        d.getFullYear() === currentYear
+      ) {
         catMap[m.category] = (catMap[m.category] || 0) + Number(m.amount);
       }
     });
@@ -349,6 +387,37 @@ function DashboardPage() {
       value,
       color: colorPalette[i % colorPalette.length],
     }));
+  }, [movements]);
+
+  const expenseTypeData = useMemo(() => {
+    const currentMonth = new Date().getMonth();
+    const currentYear = new Date().getFullYear();
+    let fixo = 0;
+    let variavel = 0;
+
+    movements.forEach((m) => {
+      const d = new Date(m.date);
+      if (
+        m.type === "despesa" &&
+        d.getMonth() === currentMonth &&
+        d.getFullYear() === currentYear
+      ) {
+        if (m.expense_type === "fixo") {
+          fixo += Number(m.amount);
+        } else {
+          variavel += Number(m.amount);
+        }
+      }
+    });
+
+    const total = fixo + variavel;
+    return {
+      fixo,
+      variavel,
+      total,
+      fixoPercent: total > 0 ? Math.round((fixo / total) * 100) : 0,
+      variavelPercent: total > 0 ? Math.round((variavel / total) * 100) : 0,
+    };
   }, [movements]);
 
   if (isLoadingMovements || isLoadingGoals || isLoadingSavings) {
@@ -438,80 +507,201 @@ function DashboardPage() {
                       <stop offset="100%" stopColor="oklch(0.72 0.13 240)" stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 6" stroke="oklch(0.3 0.012 260 / 40%)" vertical={false} />
-                  <XAxis dataKey="month" stroke="oklch(0.6 0.02 260)" fontSize={11} tickLine={false} axisLine={false} />
-                  <YAxis stroke="oklch(0.6 0.02 260)" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `${v / 1000}k`} />
+                  <CartesianGrid
+                    strokeDasharray="3 6"
+                    stroke="oklch(0.3 0.012 260 / 40%)"
+                    vertical={false}
+                  />
+                  <XAxis
+                    dataKey="month"
+                    stroke="oklch(0.6 0.02 260)"
+                    fontSize={11}
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                  <YAxis
+                    stroke="oklch(0.6 0.02 260)"
+                    fontSize={11}
+                    tickLine={false}
+                    axisLine={false}
+                    tickFormatter={(v) => `${v / 1000}k`}
+                  />
                   <Tooltip content={<ChartTooltip />} />
                   <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />
-                  <Area type="monotone" name="Receitas" dataKey="receitas" stroke="oklch(0.78 0.17 150)" strokeWidth={2} fill="url(#gRec)" />
-                  <Area type="monotone" name="Despesas" dataKey="despesas" stroke="oklch(0.65 0.22 25)" strokeWidth={2} fill="url(#gDes)" />
-                  <Area type="monotone" name="Saldo" dataKey="saldo" stroke="oklch(0.72 0.13 240)" strokeWidth={2} fill="url(#gSal)" />
+                  <Area
+                    type="monotone"
+                    name="Receitas"
+                    dataKey="receitas"
+                    stroke="oklch(0.78 0.17 150)"
+                    strokeWidth={2}
+                    fill="url(#gRec)"
+                  />
+                  <Area
+                    type="monotone"
+                    name="Despesas"
+                    dataKey="despesas"
+                    stroke="oklch(0.65 0.22 25)"
+                    strokeWidth={2}
+                    fill="url(#gDes)"
+                  />
+                  <Area
+                    type="monotone"
+                    name="Saldo"
+                    dataKey="saldo"
+                    stroke="oklch(0.72 0.13 240)"
+                    strokeWidth={2}
+                    fill="url(#gSal)"
+                  />
                 </AreaChart>
               </ResponsiveContainer>
             </CardContent>
           </Card>
 
           <Card className="glass-card">
-            <CardHeader>
-              <CardTitle className="text-base">Gastos por Categoria</CardTitle>
-              <p className="text-xs text-muted-foreground">Distribuição do mês</p>
-            </CardHeader>
-            <CardContent>
-              <div className="h-52">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Tooltip content={<ChartTooltip />} />
-                    <Pie
-                      data={categoriesData}
-                      dataKey="value"
-                      nameKey="name"
-                      innerRadius={50}
-                      outerRadius={80}
-                      paddingAngle={2}
-                      stroke="none"
-                    >
-                      {categoriesData.map((c) => (
-                        <Cell key={c.name} fill={c.color} />
-                      ))}
-                    </Pie>
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="mt-3 grid grid-cols-2 gap-1.5 text-xs">
-                {categoriesData.slice(0, 8).map((c) => (
-                  <div key={c.name} className="flex items-center gap-1.5">
-                    <span
-                      className="h-2 w-2 shrink-0 rounded-full"
-                      style={{ backgroundColor: c.color }}
-                    />
-                    <span className="truncate text-muted-foreground">{c.name}</span>
+            <CardContent className="pt-6">
+              <Carousel opts={{ align: "start", loop: true }}>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-base">Gastos por Categoria</CardTitle>
+                    <p className="text-xs text-muted-foreground">Distribuição do mês</p>
                   </div>
-                ))}
-              </div>
+                  <div className="flex items-center gap-1">
+                    <CarouselPrevious className="relative static h-7 w-7 translate-y-0" />
+                    <CarouselNext className="relative static h-7 w-7 translate-y-0" />
+                  </div>
+                </div>
+                <CarouselContent className="mt-3">
+                  {/* Slide 1: Gráfico de pizza por categoria */}
+                  <CarouselItem>
+                    <div className="h-52">
+                      {categoriesData.length > 0 ? (
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Tooltip content={<ChartTooltip />} />
+                            <Pie
+                              data={categoriesData}
+                              dataKey="value"
+                              nameKey="name"
+                              innerRadius={50}
+                              outerRadius={80}
+                              paddingAngle={2}
+                              stroke="none"
+                            >
+                              {categoriesData.map((c) => (
+                                <Cell key={c.name} fill={c.color} />
+                              ))}
+                            </Pie>
+                          </PieChart>
+                        </ResponsiveContainer>
+                      ) : (
+                        <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                          Sem despesas este mês
+                        </div>
+                      )}
+                    </div>
+                    <div className="mt-3 grid grid-cols-2 gap-1.5 text-xs">
+                      {categoriesData.slice(0, 8).map((c) => (
+                        <div key={c.name} className="flex items-center gap-1.5">
+                          <span
+                            className="h-2 w-2 shrink-0 rounded-full"
+                            style={{ backgroundColor: c.color }}
+                          />
+                          <span className="truncate text-muted-foreground">{c.name}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </CarouselItem>
+
+                  {/* Slide 2: Fixo vs Variável */}
+                  <CarouselItem>
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-center gap-6 pt-2">
+                        <div className="text-center">
+                          <p className="text-3xl font-bold text-primary">
+                            {expenseTypeData.fixoPercent}%
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">Fixos</p>
+                          <p className="text-sm font-medium">{format(expenseTypeData.fixo)}</p>
+                        </div>
+                        <div className="h-12 w-px bg-border" />
+                        <div className="text-center">
+                          <p className="text-3xl font-bold text-destructive">
+                            {expenseTypeData.variavelPercent}%
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">Variáveis</p>
+                          <p className="text-sm font-medium">{format(expenseTypeData.variavel)}</p>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-muted-foreground">Fixos</span>
+                          <span className="font-medium">{format(expenseTypeData.fixo)}</span>
+                        </div>
+                        <div className="h-3 w-full overflow-hidden rounded-full bg-secondary">
+                          <div
+                            className="h-full rounded-full bg-primary transition-all"
+                            style={{ width: `${expenseTypeData.fixoPercent}%` }}
+                          />
+                        </div>
+
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-muted-foreground">Variáveis</span>
+                          <span className="font-medium">{format(expenseTypeData.variavel)}</span>
+                        </div>
+                        <div className="h-3 w-full overflow-hidden rounded-full bg-secondary">
+                          <div
+                            className="h-full rounded-full bg-destructive transition-all"
+                            style={{ width: `${expenseTypeData.variavelPercent}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="rounded-lg bg-secondary/50 p-3 text-center">
+                        <p className="text-xs text-muted-foreground">Total do mês</p>
+                        <p className="text-lg font-bold">{format(expenseTypeData.total)}</p>
+                      </div>
+                    </div>
+                  </CarouselItem>
+                </CarouselContent>
+              </Carousel>
             </CardContent>
           </Card>
         </div>
 
         {/* Row 3: Goals */}
-        <div className={`grid grid-cols-1 gap-4 ${dashboardGoals.length > 0 ? "lg:grid-cols-3" : "lg:grid-cols-1"}`}>
+        <div
+          className={`grid grid-cols-1 gap-4 ${dashboardGoals.length > 0 ? "lg:grid-cols-3" : "lg:grid-cols-1"}`}
+        >
           {dashboardGoals.map((goal: any) => {
             const current = Number(goal.current || 0);
             const target = Number(goal.target || 0);
-            const pct = target > 0 ? Math.max(0, Math.min(100, Math.round((current / target) * 100))) : 0;
-            const isEmergency = (goal.title || "").toLowerCase().includes("reserva") || (goal.title || "").toLowerCase().includes("emergência") || (goal.period || "").toLowerCase().includes("reserva");
+            const pct =
+              target > 0 ? Math.max(0, Math.min(100, Math.round((current / target) * 100))) : 0;
+            const isEmergency =
+              (goal.title || "").toLowerCase().includes("reserva") ||
+              (goal.title || "").toLowerCase().includes("emergência") ||
+              (goal.period || "").toLowerCase().includes("reserva");
 
             return (
               <Card key={goal.id || goal.title} className="glass-card card-hover">
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-base">{goal.title}</CardTitle>
-                    <Badge variant="secondary" className={isEmergency ? "bg-info/15 text-info" : "bg-primary/15 text-primary"}>
+                    <Badge
+                      variant="secondary"
+                      className={
+                        isEmergency ? "bg-info/15 text-info" : "bg-primary/15 text-primary"
+                      }
+                    >
                       {pct}%
                     </Badge>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  {goal.description && <p className="text-sm text-muted-foreground">{goal.description}</p>}
+                  {goal.description && (
+                    <p className="text-sm text-muted-foreground">{goal.description}</p>
+                  )}
                   <div className="flex items-end justify-between">
                     <div>
                       <p className="text-xs text-muted-foreground">Atual</p>
@@ -594,9 +784,7 @@ function DashboardPage() {
                   <div className="mt-2 flex items-center gap-2 text-xs">
                     <span
                       className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-medium ${
-                        up
-                          ? "bg-primary/15 text-primary"
-                          : "bg-destructive/15 text-destructive"
+                        up ? "bg-primary/15 text-primary" : "bg-destructive/15 text-destructive"
                       }`}
                     >
                       {up ? (
@@ -622,14 +810,18 @@ function DashboardPage() {
                 <CardTitle className="text-base">Resumo dos Cartões de Crédito</CardTitle>
                 <p className="text-xs text-muted-foreground">Faturas atuais e próximas</p>
               </div>
-              <Badge variant="outline">{cardSummaries.length} cartão{cardSummaries.length > 1 ? "ões" : ""}</Badge>
+              <Badge variant="outline">
+                {cardSummaries.length} cartão{cardSummaries.length > 1 ? "ões" : ""}
+              </Badge>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                 {cardSummaries.map((card) => (
                   <button
                     key={card.id}
-                    onClick={() => navigate({ to: "/movimentacoes", search: { card: card.id, tab: "atual" } })}
+                    onClick={() =>
+                      navigate({ to: "/movimentacoes", search: { card: card.id, tab: "atual" } })
+                    }
                     className="group relative overflow-hidden rounded-xl border border-border/60 bg-gradient-to-br from-background/80 to-accent/20 p-5 text-left transition-all hover:border-primary/40 hover:shadow-lg hover:shadow-primary/10 active:scale-[0.98]"
                   >
                     <div className="mb-3 flex items-center gap-3">
@@ -638,7 +830,9 @@ function DashboardPage() {
                       </div>
                       <div>
                         <p className="font-semibold">{card.name}</p>
-                        <p className="text-xs text-muted-foreground">Vencimento dia {card.due_day}</p>
+                        <p className="text-xs text-muted-foreground">
+                          Vencimento dia {card.due_day}
+                        </p>
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
