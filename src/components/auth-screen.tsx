@@ -1,7 +1,14 @@
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
@@ -28,7 +35,7 @@ export function AuthScreen() {
         if (error) throw error;
         toast.success("Login realizado com sucesso!");
       } else {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email: email.trim().toLowerCase(),
           password,
           options: {
@@ -38,7 +45,25 @@ export function AuthScreen() {
           },
         });
 
-        if (error) throw error;
+        if (error) {
+          if (
+            error.message.includes("already") ||
+            error.message.includes("registered") ||
+            error.message.includes("exist")
+          ) {
+            throw new Error("Este email já está cadastrado. Faça login para continuar.");
+          }
+          throw error;
+        }
+
+        if (!data.user) {
+          throw new Error("Este email já está cadastrado. Faça login para continuar.");
+        }
+
+        if (data.user.identities && data.user.identities.length === 0) {
+          throw new Error("Este email já está cadastrado. Faça login para continuar.");
+        }
+
         toast.success("Conta criada com sucesso! Faça login para continuar.");
         setIsLogin(true);
       }
@@ -122,7 +147,9 @@ export function AuthScreen() {
                     <button
                       type="button"
                       className="text-xs text-primary hover:underline"
-                      onClick={() => toast.info("Por favor, entre em contato para recuperação de senha.")}
+                      onClick={() =>
+                        toast.info("Por favor, entre em contato para recuperação de senha.")
+                      }
                     >
                       Esqueceu a senha?
                     </button>
@@ -142,7 +169,11 @@ export function AuthScreen() {
             </CardContent>
 
             <CardFooter className="flex flex-col space-y-4">
-              <Button type="submit" className="w-full relative overflow-hidden group font-semibold" disabled={loading}>
+              <Button
+                type="submit"
+                className="w-full relative overflow-hidden group font-semibold"
+                disabled={loading}
+              >
                 {loading ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : (
