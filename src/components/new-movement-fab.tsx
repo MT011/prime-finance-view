@@ -25,7 +25,6 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { accounts } from "@/lib/accounts";
 import { useCategories } from "@/hooks/queries";
 import { toast } from "sonner";
 
@@ -45,6 +44,7 @@ export function NewMovementFab() {
 
   const addMovementMutation = useAddMovement();
   const { data: creditCards = [] } = useCreditCards();
+  const accounts = creditCards.map((c) => c.name);
   const { data: categoriesData } = useCategories();
   const availableCategories = (categoriesData || [])
     .filter((c) => c.type === type)

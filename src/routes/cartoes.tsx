@@ -30,7 +30,6 @@ import {
   ChevronsUpDown,
 } from "lucide-react";
 import { toast } from "sonner";
-import { accounts } from "@/lib/accounts";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/cartoes")({
@@ -58,7 +57,7 @@ function CartoesPage() {
 
   const allSuggestions = useMemo(() => {
     const savedNames = savedCardNames.map((cn) => cn.name);
-    const merged = [...new Set([...accounts, ...savedNames])];
+    const merged = [...new Set(savedNames)];
     return merged.sort((a, b) => a.localeCompare(b, "pt-BR"));
   }, [savedCardNames]);
 

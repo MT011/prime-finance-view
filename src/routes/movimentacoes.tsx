@@ -32,7 +32,6 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { accounts } from "@/lib/accounts";
 import { useValueVisibility } from "@/lib/value-visibility";
 import {
   ArrowLeft,
@@ -256,6 +255,7 @@ function MovimentacoesPage() {
 
   const { data: movements = [], isLoading } = useMovements();
   const { data: creditCards = [] } = useCreditCards();
+  const accounts = creditCards.map((c) => c.name);
   const deleteMovementMutation = useDeleteMovement();
   const bulkDeleteMutation = useBulkDeleteMovements();
 
@@ -903,7 +903,7 @@ function MovimentacoesPage() {
                   )}
                 </div>
                 {renderMovementTable(
-                  filtered,
+                  pageData,
                   creditCards,
                   format,
                   handleEditRequest,
