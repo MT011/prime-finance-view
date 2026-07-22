@@ -205,8 +205,12 @@ function DashboardPage() {
     let recPrev = 0;
     let desPrev = 0;
 
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+
     movements.forEach((m) => {
       const d = new Date(m.date);
+      const mDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
       const isCurrentMonth = d.getMonth() === currentMonth && d.getFullYear() === currentYear;
       const isPrevMonth = d.getMonth() === prevMonth && d.getFullYear() === prevMonthYear;
 
@@ -216,7 +220,7 @@ function DashboardPage() {
         if (isCurrentMonth) recMes += amt;
         if (isPrevMonth) recPrev += amt;
       } else {
-        if (m.nature === "debito" || m.nature === "pix") {
+        if ((m.nature === "debito" || m.nature === "pix") && mDateStr <= todayStr) {
           saldo -= amt;
         }
         if (isCurrentMonth) desMes += amt;

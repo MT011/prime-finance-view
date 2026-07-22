@@ -17,6 +17,7 @@ export interface Movement {
   installment_group_id?: string | null;
   installment_number?: number | null;
   total_installments?: number | null;
+  recurring_group_id?: string | null;
   created_at: string;
 }
 
@@ -153,25 +154,45 @@ export function useDeleteMovement() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (
-      input: string | { id: string; installmentGroupId?: string; deleteAll?: boolean },
+      input:
+        | string
+        | { id: string; installmentGroupId?: string; deleteAll?: boolean }
+        | { id: string; recurringGroupId?: string },
     ) => {
-      const id = typeof input === "string" ? input : input.id;
-      const installmentGroupId = typeof input === "string" ? undefined : input.installmentGroupId;
-      const deleteAll = typeof input === "string" ? false : input.deleteAll;
       const userId = await getUserId();
 
-      if (deleteAll && installmentGroupId) {
+      if (typeof input === "string") {
         const { error } = await supabase
           .from("movements")
           .delete()
-          .eq("installment_group_id", installmentGroupId)
+          .eq("id", input)
+          .eq("user_id", userId);
+        if (error) throw error;
+        return;
+      }
+
+      if ("recurringGroupId" in input && input.recurringGroupId) {
+        const { error } = await supabase
+          .from("movements")
+          .delete()
+          .eq("recurring_group_id", input.recurringGroupId)
+          .eq("user_id", userId);
+        if (error) throw error;
+        return;
+      }
+
+      if ("installmentGroupId" in input && input.deleteAll && input.installmentGroupId) {
+        const { error } = await supabase
+          .from("movements")
+          .delete()
+          .eq("installment_group_id", input.installmentGroupId)
           .eq("user_id", userId);
         if (error) throw error;
       } else {
         const { error } = await supabase
           .from("movements")
           .delete()
-          .eq("id", id)
+          .eq("id", input.id)
           .eq("user_id", userId);
         if (error) throw error;
       }
@@ -210,10 +231,24 @@ export function useUpdateMovement() {
             id: string;
             editAllInstallments?: boolean;
             installmentGroupId?: string;
+          })
+        | (Partial<Movement> & {
+            id: string;
+            recurringGroupId?: string;
           }),
     ) => {
-      const { id, editAllInstallments, installmentGroupId, ...data } = input as any;
+      const { id, editAllInstallments, installmentGroupId, recurringGroupId, ...data } = input as any;
       const userId = await getUserId();
+
+      if (recurringGroupId) {
+        const { error } = await supabase
+          .from("movements")
+          .update(data)
+          .eq("recurring_group_id", recurringGroupId)
+          .eq("user_id", userId);
+        if (error) throw error;
+        return;
+      }
 
       if (editAllInstallments && installmentGroupId) {
         const { error } = await supabase

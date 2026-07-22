@@ -138,24 +138,19 @@ export function NewMovementFab() {
           const startDate = new Date(date);
           const startMonth = startDate.getMonth();
           const startYear = startDate.getFullYear();
-
-          // Define o mês da fatura inicial com base na data escolhida
-          const initialInvoiceMonth = selectedCard
-            ? getCreditCardInvoiceInfo(date, selectedCard)?.monthKey
-            : null;
+          const recurringGroupId = crypto.randomUUID();
 
           if (selectedCard) {
-            // Com cartão de crédito: usa o mês da fatura como referência
-            const [invYear, invMonth] = (initialInvoiceMonth || "2026-01").split("-").map(Number);
+            const closingDay = Number(selectedCard.closing_day || 1);
 
             for (let offset = 0; offset < 12; offset++) {
-              const totalM = invMonth - 1 + offset;
-              const y = invYear + Math.floor(totalM / 12);
+              const totalM = startMonth + offset;
+              const y = startYear + Math.floor(totalM / 12);
               const m = (totalM % 12) + 1;
 
               const invoiceMonthKey = `${y}-${String(m).padStart(2, "0")}`;
-              // Data do movimento = primeiro dia do mês da fatura
-              const movDate = `${invoiceMonthKey}-01`;
+              const maxDay = new Date(y, m, 0).getDate();
+              const movDate = `${invoiceMonthKey}-${String(Math.min(closingDay, maxDay)).padStart(2, "0")}`;
 
               allMovements.push({
                 date: movDate,
@@ -168,6 +163,7 @@ export function NewMovementFab() {
                 expense_type: "fixo" as ExpenseType,
                 card_id: selectedCard.id,
                 invoice_month: invoiceMonthKey,
+                recurring_group_id: recurringGroupId,
               });
             }
           } else {
@@ -192,6 +188,7 @@ export function NewMovementFab() {
                 expense_type: "fixo" as ExpenseType,
                 card_id: null,
                 invoice_month: null,
+                recurring_group_id: recurringGroupId,
               });
             }
           }

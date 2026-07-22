@@ -336,8 +336,30 @@ function MovimentacoesPage() {
 
       const isInstallmentGroup =
         movementToEdit.total_installments && movementToEdit.total_installments > 1;
+      const isRecurring = !!movementToEdit.recurring_group_id;
 
-      if (isInstallmentGroup && editMode === "all") {
+      if (isRecurring && editMode === "all") {
+        const updateData: any = {
+          id: movementToEdit.id,
+          recurringGroupId: movementToEdit.recurring_group_id,
+          description: editDescription.trim(),
+          category: editCategory,
+          account: editAccount,
+          amount: numAmount,
+        };
+        if (editType === "despesa") {
+          updateData.nature = editNature;
+          updateData.expense_type = editExpenseType;
+          updateData.card_id = selectedCard?.id || null;
+        } else {
+          updateData.nature = null;
+          updateData.expense_type = null;
+          updateData.card_id = null;
+          updateData.invoice_month = null;
+        }
+        await updateMovementMutation.mutateAsync(updateData);
+        toast.success("Todas as parcelas da despesa fixa atualizadas!");
+      } else if (isInstallmentGroup && editMode === "all") {
         await updateMovementMutation.mutateAsync({
           id: movementToEdit.id,
           editAllInstallments: true,
@@ -388,7 +410,15 @@ function MovimentacoesPage() {
     try {
       const isInstallment =
         movementToDelete.total_installments && movementToDelete.total_installments > 1;
-      if (isInstallment && deleteMode === "all") {
+      const isRecurring = !!movementToDelete.recurring_group_id;
+
+      if (isRecurring && deleteMode === "all") {
+        await deleteMovementMutation.mutateAsync({
+          id: movementToDelete.id,
+          recurringGroupId: movementToDelete.recurring_group_id,
+        });
+        toast.success("Todas as parcelas da despesa fixa excluídas!");
+      } else if (isInstallment && deleteMode === "all") {
         await deleteMovementMutation.mutateAsync({
           id: movementToDelete.id,
           installmentGroupId: movementToDelete.installment_group_id,
@@ -928,9 +958,11 @@ function MovimentacoesPage() {
               </div>
               <DialogTitle className="text-center">Excluir movimentação</DialogTitle>
               <DialogDescription className="text-center">
-                {movementToDelete?.total_installments && movementToDelete.total_installments > 1
-                  ? "Esta movimentação faz parte de uma compra parcelada."
-                  : "Tem certeza que deseja excluir esta movimentação?"}
+                {movementToDelete?.recurring_group_id
+                  ? "Esta movimentação faz parte de uma despesa fixa."
+                  : movementToDelete?.total_installments && movementToDelete.total_installments > 1
+                    ? "Esta movimentação faz parte de uma compra parcelada."
+                    : "Tem certeza que deseja excluir esta movimentação?"}
                 {movementToDelete && (
                   <span className="mt-2 block font-medium text-foreground">
                     {movementToDelete.description}
@@ -945,7 +977,24 @@ function MovimentacoesPage() {
                 )}
               </DialogDescription>
             </DialogHeader>
-            {movementToDelete?.total_installments && movementToDelete.total_installments > 1 ? (
+            {movementToDelete?.recurring_group_id ? (
+              <div className="flex flex-col gap-2 px-6">
+                <Button
+                  variant={deleteMode === "single" ? "destructive" : "outline"}
+                  className="w-full justify-start"
+                  onClick={() => setDeleteMode("single")}
+                >
+                  Excluir apenas este mes
+                </Button>
+                <Button
+                  variant={deleteMode === "all" ? "destructive" : "outline"}
+                  className="w-full justify-start"
+                  onClick={() => setDeleteMode("all")}
+                >
+                  Excluir todos os meses
+                </Button>
+              </div>
+            ) : movementToDelete?.total_installments && movementToDelete.total_installments > 1 ? (
               <div className="flex flex-col gap-2 px-6">
                 <Button
                   variant={deleteMode === "single" ? "destructive" : "outline"}
@@ -1022,7 +1071,35 @@ function MovimentacoesPage() {
               <DialogTitle className="text-lg">Editar Movimentação</DialogTitle>
             </DialogHeader>
 
-            {movementToEdit?.total_installments && movementToEdit.total_installments > 1 && (
+            {movementToEdit?.recurring_group_id && (
+              <div className="px-2 pb-2">
+                <p className="mb-2 text-xs text-muted-foreground">
+                  Esta movimentação faz parte de uma despesa fixa. Deseja alterar:
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant={editMode === "single" ? "default" : "outline"}
+                    className="flex-1"
+                    onClick={() => setEditMode("single")}
+                  >
+                    Apenas este mes
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={editMode === "all" ? "default" : "outline"}
+                    className="flex-1"
+                    onClick={() => setEditMode("all")}
+                  >
+                    Todos os meses
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {!movementToEdit?.recurring_group_id &&
+              movementToEdit?.total_installments &&
+              movementToEdit.total_installments > 1 && (
               <div className="px-2 pb-2">
                 <p className="mb-2 text-xs text-muted-foreground">
                   Esta movimentação faz parte de uma compra parcelada (
@@ -1083,7 +1160,7 @@ function MovimentacoesPage() {
                   inputMode="decimal"
                   value={editAmount}
                   onChange={(e) => setEditAmount(e.target.value)}
-                  disabled={editSaving || editMode === "all"}
+                  disabled={editSaving || (editMode === "all" && !!movementToEdit?.installment_group_id && !movementToEdit?.recurring_group_id)}
                 />
               </div>
 
@@ -1134,7 +1211,7 @@ function MovimentacoesPage() {
                     <Select
                       value={editNature}
                       onValueChange={(v) => setEditNature(v)}
-                      disabled={editSaving || editMode === "all"}
+                      disabled={editSaving || (editMode === "all" && !!movementToEdit?.installment_group_id && !movementToEdit?.recurring_group_id)}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione" />
@@ -1171,7 +1248,7 @@ function MovimentacoesPage() {
                   <Select
                     value={editCardId}
                     onValueChange={setEditCardId}
-                    disabled={editSaving || editMode === "all"}
+                    disabled={editSaving || (editMode === "all" && !!movementToEdit?.installment_group_id && !movementToEdit?.recurring_group_id)}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione um cartão (opcional)" />
@@ -1210,7 +1287,7 @@ function MovimentacoesPage() {
                   type="date"
                   value={editDate}
                   onChange={(e) => setEditDate(e.target.value)}
-                  disabled={editSaving || editMode === "all"}
+                  disabled={editSaving || (editMode === "all" && !!movementToEdit?.installment_group_id && !movementToEdit?.recurring_group_id)}
                 />
               </div>
 
