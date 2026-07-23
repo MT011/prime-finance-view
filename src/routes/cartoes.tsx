@@ -17,6 +17,7 @@ import {
   useCreateCreditCard,
   useCreditCards,
   useDeleteCreditCard,
+  useUpdateCreditCard,
   useCardNames,
   useCreateCardName,
 } from "@/hooks/queries";
@@ -24,12 +25,14 @@ import { useState, useMemo, useCallback } from "react";
 import {
   Loader2,
   Plus,
+  Pencil,
   Trash2,
   CreditCard as CreditCardIcon,
   Check,
   ChevronsUpDown,
 } from "lucide-react";
 import { toast } from "sonner";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/cartoes")({
@@ -54,6 +57,15 @@ function CartoesPage() {
   const [closingDay, setClosingDay] = useState("2");
   const [dueDay, setDueDay] = useState("10");
   const [comboboxOpen, setComboboxOpen] = useState(false);
+
+  const updateCardMutation = useUpdateCreditCard();
+
+  const [editCard, setEditCard] = useState<import("@/hooks/queries").CreditCard | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editLimit, setEditLimit] = useState("");
+  const [editClosingDay, setEditClosingDay] = useState("");
+  const [editDueDay, setEditDueDay] = useState("");
+  const [editComboboxOpen, setEditComboboxOpen] = useState(false);
 
   const allSuggestions = useMemo(() => {
     const savedNames = savedCardNames.map((cn) => cn.name);
@@ -122,6 +134,52 @@ function CartoesPage() {
       toast.success("Cartão removido com sucesso!");
     } catch (error: any) {
       toast.error("Erro ao remover cartão: " + error.message);
+    }
+  };
+
+  const openEditDialog = (card: import("@/hooks/queries").CreditCard) => {
+    setEditCard(card);
+    setEditName(card.name);
+    setEditLimit(String(card.limit));
+    setEditClosingDay(String(card.closing_day));
+    setEditDueDay(String(card.due_day));
+  };
+
+  const handleEditSave = async () => {
+    if (!editCard) return;
+    const parsedLimit = Number(editLimit);
+    const parsedClosingDay = Number(editClosingDay);
+    const parsedDueDay = Number(editDueDay);
+
+    if (!editName.trim()) {
+      toast.error("Informe o nome do cartão.");
+      return;
+    }
+    if (!Number.isFinite(parsedLimit) || parsedLimit <= 0) {
+      toast.error("Informe um limite válido.");
+      return;
+    }
+    if (!Number.isInteger(parsedClosingDay) || parsedClosingDay < 1 || parsedClosingDay > 31) {
+      toast.error("Informe um dia de fechamento válido.");
+      return;
+    }
+    if (!Number.isInteger(parsedDueDay) || parsedDueDay < 1 || parsedDueDay > 31) {
+      toast.error("Informe um dia de vencimento válido.");
+      return;
+    }
+
+    try {
+      await updateCardMutation.mutateAsync({
+        id: editCard.id,
+        name: editName.trim(),
+        limit: parsedLimit,
+        closing_day: parsedClosingDay,
+        due_day: parsedDueDay,
+      });
+      toast.success("Cartão atualizado com sucesso!");
+      setEditCard(null);
+    } catch (error: any) {
+      toast.error("Erro ao atualizar cartão: " + error.message);
     }
   };
 
@@ -260,14 +318,24 @@ function CartoesPage() {
                       Limite: R$ {Number(card.limit).toLocaleString("pt-BR")}
                     </p>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                    onClick={() => handleDelete(card.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  <div className="flex gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-muted-foreground hover:text-primary"
+                      onClick={() => openEditDialog(card)}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                      onClick={() => handleDelete(card.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </CardHeader>
                 <CardContent className="space-y-2 text-sm text-muted-foreground">
                   <p>Fechamento da fatura: dia {card.closing_day}</p>
@@ -282,6 +350,107 @@ function CartoesPage() {
           )}
         </div>
       </main>
+
+      <Dialog open={!!editCard} onOpenChange={(open) => !open && setEditCard(null)}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Editar cartão</DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label>Nome do cartão</Label>
+              <Popover open={editComboboxOpen} onOpenChange={setEditComboboxOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={editComboboxOpen}
+                    className="w-full justify-between font-normal"
+                  >
+                    {editName || "Selecione ou digite o nome"}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                  <Command>
+                    <CommandInput
+                      placeholder="Buscar ou cadastrar cartão..."
+                      value={editName}
+                      onValueChange={setEditName}
+                    />
+                    <CommandList>
+                      <CommandEmpty>
+                        <span className="text-muted-foreground">
+                          Pressione Enter para cadastrar "{editName}"
+                        </span>
+                      </CommandEmpty>
+                      <CommandGroup heading="Sugestões">
+                        {allSuggestions
+                          .filter((s) => s.toLowerCase().includes(editName.toLowerCase()))
+                          .map((suggestion) => (
+                            <CommandItem
+                              key={suggestion}
+                              value={suggestion}
+                              onSelect={() => {
+                                setEditName(suggestion);
+                                setEditComboboxOpen(false);
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  editName === suggestion ? "opacity-100" : "opacity-0",
+                                )}
+                              />
+                              {suggestion}
+                            </CommandItem>
+                          ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            </div>
+            <div className="space-y-2">
+              <Label>Limite</Label>
+              <Input
+                type="number"
+                value={editLimit}
+                onChange={(e) => setEditLimit(e.target.value)}
+                placeholder="R$ 0,00"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Dia de fechamento</Label>
+              <Input
+                type="number"
+                min="1"
+                max="31"
+                value={editClosingDay}
+                onChange={(e) => setEditClosingDay(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Dia de vencimento</Label>
+              <Input
+                type="number"
+                min="1"
+                max="31"
+                value={editDueDay}
+                onChange={(e) => setEditDueDay(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditCard(null)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleEditSave} disabled={updateCardMutation.isPending}>
+              {updateCardMutation.isPending ? "Salvando..." : "Salvar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

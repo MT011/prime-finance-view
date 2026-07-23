@@ -199,7 +199,15 @@ function renderMovementTable(
                     : "bg-destructive/15 text-destructive"
                 }`}
               >
-                {m.type === "receita" ? "Entrada" : "Saída"}
+                {m.type === "receita"
+                  ? "Receita"
+                  : m.nature === "credito"
+                    ? "Crédito"
+                    : m.nature === "debito"
+                      ? "Débito"
+                      : m.nature === "pix"
+                        ? "PIX"
+                        : "Saída"}
               </span>
             </TableCell>
             <TableCell

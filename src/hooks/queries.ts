@@ -323,6 +323,39 @@ export function useCreateCreditCard() {
   });
 }
 
+export function useUpdateCreditCard() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      id,
+      name,
+      limit,
+      closing_day,
+      due_day,
+    }: {
+      id: string;
+      name: string;
+      limit: number;
+      closing_day: number;
+      due_day: number;
+    }) => {
+      const userId = await getUserId();
+      const { data, error } = await supabase
+        .from("credit_cards")
+        .update({ name, limit, closing_day, due_day })
+        .eq("id", id)
+        .eq("user_id", userId)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["credit_cards"] });
+    },
+  });
+}
+
 export function useDeleteCreditCard() {
   const queryClient = useQueryClient();
   return useMutation({

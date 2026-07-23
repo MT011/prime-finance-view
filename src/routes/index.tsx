@@ -491,7 +491,7 @@ function DashboardPage() {
               </div>
               <Badge variant="secondary" className="gap-1">
                 <Sparkles className="h-3 w-3" />
-                2025
+                {new Date().getFullYear()}
               </Badge>
             </CardHeader>
             <CardContent className="h-72">
