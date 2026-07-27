@@ -3,6 +3,7 @@ import { AppHeader } from "@/components/app-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useValueVisibility } from "@/lib/value-visibility";
 import { useMovements } from "@/hooks/queries";
+import { parseLocalDate } from "@/lib/credit-cards";
 import { Loader2 } from "lucide-react";
 import { useMemo } from "react";
 import {
@@ -45,11 +46,11 @@ function RelatoriosPage() {
       monthsMap[monthsShort[i]] = { receitas: 0, despesas: 0, despesas_imediatas: 0 };
     }
 
-    const sortedMovements = [...movements].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    const sortedMovements = [...movements].sort((a, b) => parseLocalDate(a.date).getTime() - parseLocalDate(b.date).getTime());
 
     let runningBalance = 0;
     sortedMovements.forEach((m) => {
-      const d = new Date(m.date);
+      const d = parseLocalDate(m.date);
       if (d.getFullYear() === currentYear) {
         const monthName = monthsShort[d.getMonth()];
         const amt = Number(m.amount);

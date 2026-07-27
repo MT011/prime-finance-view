@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Plus, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCreditCards, useAddMovement } from "@/hooks/queries";
-import { getCreditCardInvoiceInfo, getInstallmentInvoiceInfos } from "@/lib/credit-cards";
+import { getCreditCardInvoiceInfo, getInstallmentInvoiceInfos, parseLocalDate } from "@/lib/credit-cards";
 
 type MovementNature = "credito" | "debito" | "pix";
 type ExpenseType = "fixo" | "variavel";
@@ -34,7 +34,8 @@ export function NewMovementFab() {
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState("");
   const [account, setAccount] = useState("");
-  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
+  const now = new Date();
+  const [date, setDate] = useState(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`);
   const [description, setDescription] = useState("");
   const [nature, setNature] = useState<MovementNature | "">("");
   const [expenseType, setExpenseType] = useState<ExpenseType | "">("");
@@ -82,14 +83,83 @@ export function NewMovementFab() {
       const numInstallments = parseInt(installments) || 1;
       const installmentGroupId = crypto.randomUUID();
 
-      if (type === "despesa" && nature === "credito" && selectedCard && numInstallments > 1) {
+      // Despesa fixa tem prioridade máxima — gera 12 meses
+      if (type === "despesa" && expenseType === "fixo") {
+        const startDate = parseLocalDate(date);
+        const startMonth = startDate.getMonth();
+        const startYear = startDate.getFullYear();
+        const recurringGroupId = crypto.randomUUID();
+
+        const allMovements: any[] = [];
+
+        if (selectedCard) {
+          const originalDay = startDate.getDate();
+
+          for (let offset = 0; offset < 12; offset++) {
+            const totalM = startMonth + offset;
+            const y = startYear + Math.floor(totalM / 12);
+            const m = (totalM % 12) + 1;
+
+            const invoiceMonthKey = `${y}-${String(m).padStart(2, "0")}`;
+            const maxDay = new Date(y, m, 0).getDate();
+            const day = Math.min(originalDay, maxDay);
+            const movDate = `${invoiceMonthKey}-${String(day).padStart(2, "0")}`;
+
+            allMovements.push({
+              date: movDate,
+              description: description.trim(),
+              category,
+              account,
+              type: "despesa" as const,
+              amount: numAmount,
+              nature: nature as MovementNature,
+              expense_type: "fixo" as ExpenseType,
+              card_id: selectedCard.id,
+              invoice_month: invoiceMonthKey,
+              recurring_group_id: recurringGroupId,
+            });
+          }
+        } else {
+          for (let offset = 0; offset < 12; offset++) {
+            const totalM = startMonth + offset;
+            const y = startYear + Math.floor(totalM / 12);
+            const m = (totalM % 12) + 1;
+
+            const monthKey = `${y}-${String(m).padStart(2, "0")}`;
+            const day = Math.min(startDate.getDate(), new Date(y, m, 0).getDate());
+            const dStr = `${monthKey}-${String(day).padStart(2, "0")}`;
+
+            allMovements.push({
+              date: dStr,
+              description: description.trim(),
+              category,
+              account,
+              type: "despesa" as const,
+              amount: numAmount,
+              nature: nature as MovementNature,
+              expense_type: "fixo" as ExpenseType,
+              card_id: null,
+              invoice_month: null,
+              recurring_group_id: recurringGroupId,
+            });
+          }
+        }
+
+        await addMovementMutation.mutateAsync(allMovements);
+        toast.success("Despesa fixa salva para os próximos 12 meses!");
+      } else if (type === "despesa" && nature === "credito" && selectedCard && numInstallments > 1) {
         const installmentInfos = getInstallmentInvoiceInfos(date, selectedCard, numInstallments);
         const installmentAmount = numAmount / numInstallments;
         const desc = description.trim();
 
+        const originalDay = parseLocalDate(date).getDate();
         const movements = installmentInfos.map((info, i) => {
-          const installmentDate = new Date(info.monthKey + "-01");
-          const dateStr = installmentDate.toISOString().split("T")[0];
+          const [yStr, mStr] = info.monthKey.split("-");
+          const y = parseInt(yStr);
+          const m = parseInt(mStr);
+          const maxDay = new Date(y, m, 0).getDate();
+          const day = Math.min(originalDay, maxDay);
+          const dateStr = `${info.monthKey}-${String(day).padStart(2, "0")}`;
           return {
             date: dateStr,
             description: `${desc} (${i + 1}/${numInstallments})`,
@@ -112,10 +182,6 @@ export function NewMovementFab() {
       } else {
         const invoiceInfo = selectedCard ? getCreditCardInvoiceInfo(date, selectedCard) : null;
 
-        // Monta os movimentos a serem criados
-        const allMovements: any[] = [];
-
-        // Cria o movimento da data atual (ou do cartão)
         const baseMovement: any = {
           date,
           description: description.trim(),
@@ -133,83 +199,18 @@ export function NewMovementFab() {
             : {}),
         };
 
-        // Se for despesa fixa, gera para os próximos 12 meses
-        if (type === "despesa" && expenseType === "fixo") {
-          const startDate = new Date(date);
-          const startMonth = startDate.getMonth();
-          const startYear = startDate.getFullYear();
-          const recurringGroupId = crypto.randomUUID();
-
-          if (selectedCard) {
-            const closingDay = Number(selectedCard.closing_day || 1);
-
-            for (let offset = 0; offset < 12; offset++) {
-              const totalM = startMonth + offset;
-              const y = startYear + Math.floor(totalM / 12);
-              const m = (totalM % 12) + 1;
-
-              const invoiceMonthKey = `${y}-${String(m).padStart(2, "0")}`;
-              const maxDay = new Date(y, m, 0).getDate();
-              const movDate = `${invoiceMonthKey}-${String(Math.min(closingDay, maxDay)).padStart(2, "0")}`;
-
-              allMovements.push({
-                date: movDate,
-                description: description.trim(),
-                category,
-                account,
-                type: "despesa" as const,
-                amount: numAmount,
-                nature: nature as MovementNature,
-                expense_type: "fixo" as ExpenseType,
-                card_id: selectedCard.id,
-                invoice_month: invoiceMonthKey,
-                recurring_group_id: recurringGroupId,
-              });
-            }
-          } else {
-            // Sem cartão: usa o mês civil como referência
-            for (let offset = 0; offset < 12; offset++) {
-              const totalM = startMonth + offset;
-              const y = startYear + Math.floor(totalM / 12);
-              const m = (totalM % 12) + 1;
-
-              const monthKey = `${y}-${String(m).padStart(2, "0")}`;
-              const day = Math.min(startDate.getDate(), new Date(y, m, 0).getDate());
-              const dStr = `${monthKey}-${String(day).padStart(2, "0")}`;
-
-              allMovements.push({
-                date: dStr,
-                description: description.trim(),
-                category,
-                account,
-                type: "despesa" as const,
-                amount: numAmount,
-                nature: nature as MovementNature,
-                expense_type: "fixo" as ExpenseType,
-                card_id: null,
-                invoice_month: null,
-                recurring_group_id: recurringGroupId,
-              });
-            }
-          }
-        } else {
-          allMovements.push(baseMovement);
-        }
-
-        await addMovementMutation.mutateAsync(allMovements);
-
-        toast.success(
-          type === "despesa" && expenseType === "fixo"
-            ? "Despesa fixa salva para os próximos 12 meses!"
-            : "Movimentação salva com sucesso!"
-        );
+        await addMovementMutation.mutateAsync(baseMovement);
+        toast.success("Movimentação salva com sucesso!");
       }
 
       // Reset form
       setAmount("");
       setCategory("");
       setAccount("");
-      setDate(new Date().toISOString().split("T")[0]);
+      {
+        const n = new Date();
+        setDate(`${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-${String(n.getDate()).padStart(2, "0")}`);
+      }
       setDescription("");
       setNature("");
       setExpenseType("");

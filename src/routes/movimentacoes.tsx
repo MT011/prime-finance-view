@@ -61,6 +61,7 @@ import {
   getCurrentInvoiceMonthKey,
   getNextInvoiceMonthKey,
   getInvoiceMonthLabel,
+  parseLocalDate,
 } from "@/lib/credit-cards";
 
 export const Route = createFileRoute("/movimentacoes")({
@@ -166,7 +167,7 @@ function renderMovementTable(
               </TableCell>
             )}
             <TableCell className="whitespace-nowrap text-muted-foreground">
-              {new Date(m.date).toLocaleDateString("pt-BR")}
+              {parseLocalDate(m.date).toLocaleDateString("pt-BR")}
             </TableCell>
             <TableCell className="font-medium">
               {m.description}
@@ -490,7 +491,7 @@ function MovimentacoesPage() {
   const filtered = useMemo(() => {
     return movements.filter((m) => {
       if (search && !m.description.toLowerCase().includes(search.toLowerCase())) return false;
-      if (month !== "all" && new Date(m.date).getMonth() + 1 !== Number(month)) return false;
+      if (month !== "all" && parseLocalDate(m.date).getMonth() + 1 !== Number(month)) return false;
       if (cat !== "all" && m.category !== cat) return false;
       if (acc !== "all" && m.account !== acc) return false;
       if (type !== "all" && m.type !== type) return false;
@@ -706,11 +707,7 @@ function MovimentacoesPage() {
               <TabsContent value="historico" className="mt-4">
                 <div className="space-y-4">
                   {(() => {
-                    const months = getInvoiceMonthsFromMovements(movements, selectedCard.id).filter(
-                      (m) =>
-                        m !== getCurrentInvoiceMonthKey(selectedCard) &&
-                        m !== getNextInvoiceMonthKey(selectedCard),
-                    );
+                    const months = getInvoiceMonthsFromMovements(movements, selectedCard.id);
                     if (months.length === 0) {
                       return (
                         <Card className="glass-card">

@@ -10,23 +10,25 @@ export interface CreditCardInvoiceInfo {
 
 const monthNames = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
+export function parseLocalDate(dateStr: string | Date): Date {
+  if (dateStr instanceof Date) return dateStr;
+  const [year, month, day] = dateStr.split("T")[0].split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
+
 export function getCreditCardInvoiceInfo(
   dateInput: string | Date,
   card?: Pick<CreditCard, "closing_day" | "due_day"> | null,
 ): CreditCardInvoiceInfo | null {
   if (!card) return null;
 
-  const date = new Date(dateInput);
-  const closingDay = Number(card.closing_day || 1);
+  const date = parseLocalDate(dateInput);
   const dueDay = Number(card.due_day || 10);
 
   const currentMonth = date.getMonth();
   const currentYear = date.getFullYear();
-  const isBeforeOrOnClosing = date.getDate() <= closingDay;
 
-  const invoiceDate = isBeforeOrOnClosing
-    ? new Date(currentYear, currentMonth, 1)
-    : new Date(currentYear, currentMonth + 1, 1);
+  const invoiceDate = new Date(currentYear, currentMonth, 1);
 
   const dueDate = new Date(invoiceDate.getFullYear(), invoiceDate.getMonth(), dueDay);
 
@@ -47,14 +49,8 @@ export function getInvoiceLabelForCard(dateInput: string | Date, card?: Pick<Cre
 
 export function getCurrentInvoiceMonthKey(card: Pick<CreditCard, "closing_day">): string {
   const now = new Date();
-  const day = now.getDate();
   const month = now.getMonth();
   const year = now.getFullYear();
-  const cd = Number(card.closing_day);
-  if (day > cd) {
-    const nextM = month + 1;
-    return `${nextM > 11 ? year + 1 : year}-${String((nextM > 11 ? 0 : nextM) + 1).padStart(2, "0")}`;
-  }
   return `${year}-${String(month + 1).padStart(2, "0")}`;
 }
 

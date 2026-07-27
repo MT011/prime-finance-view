@@ -46,6 +46,7 @@ import {
   getCurrentInvoiceMonthKey,
   getNextInvoiceMonthKey,
   getInvoiceMonthLabel,
+  parseLocalDate,
 } from "@/lib/credit-cards";
 import {
   Carousel,
@@ -209,7 +210,7 @@ function DashboardPage() {
     const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 
     movements.forEach((m) => {
-      const d = new Date(m.date);
+      const d = parseLocalDate(m.date);
       const mDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
       const isCurrentMonth = d.getMonth() === currentMonth && d.getFullYear() === currentYear;
       const isPrevMonth = d.getMonth() === prevMonth && d.getFullYear() === prevMonthYear;
@@ -325,12 +326,12 @@ function DashboardPage() {
     }
 
     const sortedMovements = [...movements].sort(
-      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
+      (a, b) => parseLocalDate(a.date).getTime() - parseLocalDate(b.date).getTime(),
     );
 
     let runningBalance = 0;
     sortedMovements.forEach((m) => {
-      const d = new Date(m.date);
+      const d = parseLocalDate(m.date);
       if (d.getFullYear() === currentYear) {
         const monthName = monthsShort[d.getMonth()];
         const amt = Number(m.amount);
@@ -363,7 +364,7 @@ function DashboardPage() {
     const currentYear = new Date().getFullYear();
 
     movements.forEach((m) => {
-      const d = new Date(m.date);
+      const d = parseLocalDate(m.date);
       if (
         m.type === "despesa" &&
         d.getMonth() === currentMonth &&
@@ -400,7 +401,7 @@ function DashboardPage() {
     let variavel = 0;
 
     movements.forEach((m) => {
-      const d = new Date(m.date);
+      const d = parseLocalDate(m.date);
       if (
         m.type === "despesa" &&
         d.getMonth() === currentMonth &&
@@ -894,7 +895,7 @@ function DashboardPage() {
                 {movements.slice(0, 8).map((m) => (
                   <TableRow key={m.id} className="hover:bg-accent/30">
                     <TableCell className="whitespace-nowrap text-muted-foreground">
-                      {new Date(m.date).toLocaleDateString("pt-BR")}
+                      {parseLocalDate(m.date).toLocaleDateString("pt-BR")}
                     </TableCell>
                     <TableCell className="font-medium">{m.description}</TableCell>
                     <TableCell>
