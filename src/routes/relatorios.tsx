@@ -148,7 +148,7 @@ function RelatoriosPage() {
             </CardHeader>
             <CardContent>
               <p className="text-2xl font-bold truncate">{maiorReceita.description}</p>
-              <p className="money mt-1 text-3xl font-bold text-primary">{format(Number(maiorReceita.amount))}</p>
+              <p className="mt-1 text-3xl font-bold text-primary">{format(Number(maiorReceita.amount))}</p>
             </CardContent>
           </Card>
           <Card className="glass-card card-hover">
@@ -160,7 +160,7 @@ function RelatoriosPage() {
             </CardHeader>
             <CardContent>
               <p className="text-2xl font-bold truncate">{maiorGasto.name}</p>
-              <p className="money mt-1 text-3xl font-bold text-destructive">{format(maiorGasto.value)}</p>
+              <p className="mt-1 text-3xl font-bold text-destructive">{format(maiorGasto.value)}</p>
             </CardContent>
           </Card>
         </div>
@@ -258,7 +258,7 @@ function RelatoriosPage() {
                         style={{ backgroundColor: c.color }}
                       />
                       <span className="flex-1 truncate text-sm font-medium">{c.name}</span>
-                      <span className="money text-sm font-semibold">{format(c.value)}</span>
+                      <span className="text-sm font-semibold">{format(c.value)}</span>
                       <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
                     </div>
                   ))

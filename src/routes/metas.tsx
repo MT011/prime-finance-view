@@ -353,7 +353,7 @@ function MetasPage() {
                         {getCurrentMonthLabel(creditCards, g)}
                       </p>
                     )}
-                    <p className="money text-2xl font-bold">{format(Number(g.current))}</p>
+                    <p className="text-2xl font-bold">{format(Number(g.current))}</p>
                     <p className="text-xs text-muted-foreground">
                       de {format(Number(g.target))} · {g.reset_monthly ? "Mensal" : g.period}
                     </p>
@@ -440,8 +440,8 @@ function MetasPage() {
                             <span className="text-destructive font-medium">Não</span>
                           )}
                         </TableCell>
-                        <TableCell className="money text-right">{format(Number(h.target))}</TableCell>
-                        <TableCell className="money text-right">{format(Number(h.current))}</TableCell>
+                        <TableCell className="text-right">{format(Number(h.target))}</TableCell>
+                        <TableCell className="text-right">{format(Number(h.current))}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -489,7 +489,7 @@ function MetasPage() {
             {depositGoal && (
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Progresso atual</span>
-                <span className="money font-medium">{format(Number(depositGoal.current))} de {format(Number(depositGoal.target))}</span>
+                <span className="font-medium">{format(Number(depositGoal.current))} de {format(Number(depositGoal.target))}</span>
               </div>
             )}
             <div className="space-y-2">

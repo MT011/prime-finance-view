@@ -111,7 +111,7 @@ function ReservaPage() {
               <CardTitle className="text-sm text-muted-foreground font-medium">Valor Atual</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <p className="money text-3xl font-bold">{format(atual)}</p>
+              <p className="text-3xl font-bold">{format(atual)}</p>
               <Progress value={pct} className="h-2" />
               <p className="text-xs text-muted-foreground">{pct}% da meta atingido</p>
             </CardContent>
@@ -121,7 +121,7 @@ function ReservaPage() {
               <CardTitle className="text-sm text-muted-foreground font-medium">Meta</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="money text-3xl font-bold">{format(meta)}</p>
+              <p className="text-3xl font-bold">{format(meta)}</p>
               <p className="mt-2 text-xs text-muted-foreground">Objetivo total</p>
             </CardContent>
           </Card>
@@ -130,7 +130,7 @@ function ReservaPage() {
               <CardTitle className="text-sm text-muted-foreground font-medium">Falta</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="money text-3xl font-bold text-primary">{format(falta)}</p>
+              <p className="text-3xl font-bold text-primary">{format(falta)}</p>
               <p className="mt-2 text-xs text-muted-foreground">~{meses} meses no ritmo atual</p>
             </CardContent>
           </Card>
