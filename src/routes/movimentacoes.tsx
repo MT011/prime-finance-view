@@ -578,7 +578,7 @@ function MovimentacoesPage() {
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Limite Total</p>
-                    <p className="font-semibold">{format(Number(selectedCard.limit))}</p>
+                    <p className="money font-semibold">{format(Number(selectedCard.limit))}</p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Limite Disponível</p>
