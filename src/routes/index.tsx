@@ -115,7 +115,7 @@ function StatCard({
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="flex items-end justify-between gap-2">
-          <span className="text-2xl font-bold tracking-tight md:text-3xl">{value}</span>
+          <span className="money text-2xl font-bold tracking-tight md:text-3xl">{value}</span>
           {action}
         </div>
         {delta && (
