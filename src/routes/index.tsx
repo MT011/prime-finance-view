@@ -626,7 +626,7 @@ function DashboardPage() {
                             {expenseTypeData.fixoPercent}%
                           </p>
                           <p className="text-xs text-muted-foreground mt-1">Fixos</p>
-                          <p className="text-sm font-medium">{format(expenseTypeData.fixo)}</p>
+                          <p className="money text-sm font-medium">{format(expenseTypeData.fixo)}</p>
                         </div>
                         <div className="h-12 w-px bg-border" />
                         <div className="text-center">
@@ -634,14 +634,14 @@ function DashboardPage() {
                             {expenseTypeData.variavelPercent}%
                           </p>
                           <p className="text-xs text-muted-foreground mt-1">Variáveis</p>
-                          <p className="text-sm font-medium">{format(expenseTypeData.variavel)}</p>
+                          <p className="money text-sm font-medium">{format(expenseTypeData.variavel)}</p>
                         </div>
                       </div>
 
                       <div className="space-y-2">
                         <div className="flex items-center justify-between text-xs">
                           <span className="text-muted-foreground">Fixos</span>
-                          <span className="font-medium">{format(expenseTypeData.fixo)}</span>
+                          <span className="money font-medium">{format(expenseTypeData.fixo)}</span>
                         </div>
                         <div className="h-3 w-full overflow-hidden rounded-full bg-secondary">
                           <div
@@ -652,7 +652,7 @@ function DashboardPage() {
 
                         <div className="flex items-center justify-between text-xs">
                           <span className="text-muted-foreground">Variáveis</span>
-                          <span className="font-medium">{format(expenseTypeData.variavel)}</span>
+                          <span className="money font-medium">{format(expenseTypeData.variavel)}</span>
                         </div>
                         <div className="h-3 w-full overflow-hidden rounded-full bg-secondary">
                           <div
@@ -664,7 +664,7 @@ function DashboardPage() {
 
                       <div className="rounded-lg bg-secondary/50 p-3 text-center">
                         <p className="text-xs text-muted-foreground">Total do mês</p>
-                        <p className="text-lg font-bold">{format(expenseTypeData.total)}</p>
+                        <p className="money text-lg font-bold">{format(expenseTypeData.total)}</p>
                       </div>
                     </div>
                   </CarouselItem>
@@ -710,11 +710,11 @@ function DashboardPage() {
                   <div className="flex items-end justify-between">
                     <div>
                       <p className="text-xs text-muted-foreground">Atual</p>
-                      <p className="text-2xl font-bold">{format(current)}</p>
+                      <p className="money text-2xl font-bold">{format(current)}</p>
                     </div>
                     <div className="text-right">
                       <p className="text-xs text-muted-foreground">Meta</p>
-                      <p className="text-sm font-medium">{format(target)}</p>
+                      <p className="money text-sm font-medium">{format(target)}</p>
                     </div>
                   </div>
                   <Progress value={pct} className="h-2" />
@@ -736,7 +736,7 @@ function DashboardPage() {
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
-              <p className="text-3xl font-bold tracking-tight">{format(patrimonio)}</p>
+              <p className="money text-3xl font-bold tracking-tight">{format(patrimonio)}</p>
               <div className="h-16">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={monthlyEvolution}>
@@ -785,7 +785,7 @@ function DashboardPage() {
                   <p className="text-xs uppercase tracking-wider text-muted-foreground">
                     {r.label}
                   </p>
-                  <p className="mt-2 text-2xl font-bold">{format(r.now)}</p>
+                  <p className="money mt-2 text-2xl font-bold">{format(r.now)}</p>
                   <div className="mt-2 flex items-center gap-2 text-xs">
                     <span
                       className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-medium ${
@@ -799,7 +799,7 @@ function DashboardPage() {
                       )}
                       {Math.abs(diff).toFixed(1)}%
                     </span>
-                    <span className="text-muted-foreground">era {format(r.prev)}</span>
+                    <span className="money text-muted-foreground">era {format(r.prev)}</span>
                   </div>
                 </div>
               );
@@ -843,11 +843,11 @@ function DashboardPage() {
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <p className="text-xs text-muted-foreground">Fatura Atual</p>
-                        <p className="text-lg font-bold">{format(card.currentTotal)}</p>
+                        <p className="money text-lg font-bold">{format(card.currentTotal)}</p>
                       </div>
                       <div>
                         <p className="text-xs text-muted-foreground">Próxima Fatura</p>
-                        <p className="text-lg font-bold">{format(card.nextTotal)}</p>
+                        <p className="money text-lg font-bold">{format(card.nextTotal)}</p>
                       </div>
                     </div>
                     <div className="mt-3">
