@@ -237,7 +237,8 @@ export function useUpdateMovement() {
             recurringGroupId?: string;
           }),
     ) => {
-      const { id, editAllInstallments, installmentGroupId, recurringGroupId, ...data } = input as any;
+      const { id, editAllInstallments, installmentGroupId, recurringGroupId, ...data } =
+        input as any;
       const userId = await getUserId();
 
       if (recurringGroupId) {
@@ -720,6 +721,79 @@ export function useGoalHistory() {
 
       if (error) throw error;
       return data || [];
+    },
+  });
+}
+
+export interface CategoryBudget {
+  id: string;
+  user_id: string;
+  category: string;
+  monthly_limit: number;
+  created_at: string;
+}
+
+export function useCategoryBudgets() {
+  return useQuery<CategoryBudget[]>({
+    queryKey: ["category_budgets"],
+    queryFn: async () => {
+      const userId = await getUserId();
+      const { data, error } = await supabase
+        .from("category_budgets")
+        .select("*")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: true });
+
+      if (error) throw error;
+      return data || [];
+    },
+  });
+}
+
+export function useUpsertCategoryBudget() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      category,
+      monthly_limit,
+    }: {
+      category: string;
+      monthly_limit: number;
+    }) => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) throw new Error("Usuário não autenticado");
+
+      const { data, error } = await supabase
+        .from("category_budgets")
+        .upsert({ user_id: user.id, category, monthly_limit }, { onConflict: "user_id,category" })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["category_budgets"] });
+    },
+  });
+}
+
+export function useDeleteCategoryBudget() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (category: string) => {
+      const userId = await getUserId();
+      const { error } = await supabase
+        .from("category_budgets")
+        .delete()
+        .eq("category", category)
+        .eq("user_id", userId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["category_budgets"] });
     },
   });
 }

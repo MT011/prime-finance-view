@@ -39,7 +39,13 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { useMovements, useGoals, useEmergencySavings, useCreditCards } from "@/hooks/queries";
+import {
+  useMovements,
+  useGoals,
+  useEmergencySavings,
+  useCreditCards,
+  useCategoryBudgets,
+} from "@/hooks/queries";
 import { Loader2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import {
@@ -178,6 +184,7 @@ function DashboardPage() {
   const { data: goals = [], isLoading: isLoadingGoals } = useGoals();
   const { data: emergencySavings = [], isLoading: isLoadingSavings } = useEmergencySavings();
   const { data: creditCards = [] } = useCreditCards();
+  const { data: budgets = [] } = useCategoryBudgets();
 
   const {
     saldoAtual,
@@ -424,6 +431,35 @@ function DashboardPage() {
       variavelPercent: total > 0 ? Math.round((variavel / total) * 100) : 0,
     };
   }, [movements]);
+
+  const budgetData = useMemo(() => {
+    const budgetsMap: Record<string, number> = {};
+    budgets.forEach((b) => {
+      budgetsMap[b.category] = b.monthly_limit;
+    });
+
+    const spentMap: Record<string, number> = {};
+    categoriesData.forEach((c) => {
+      spentMap[c.name] = c.value;
+    });
+
+    return Object.entries(budgetsMap)
+      .filter(([cat]) => spentMap[cat] !== undefined)
+      .map(([category, limit]) => {
+        const spent = spentMap[category];
+        const pct = limit > 0 ? Math.round((spent / limit) * 100) : 0;
+        let color: "success" | "warning" | "danger";
+        if (pct > 100) {
+          color = "danger";
+        } else if (pct >= 80) {
+          color = "warning";
+        } else {
+          color = "success";
+        }
+        return { category, spent, limit, pct, color };
+      })
+      .sort((a, b) => b.pct - a.pct);
+  }, [budgets, categoriesData]);
 
   if (isLoadingMovements || isLoadingGoals || isLoadingSavings) {
     return (
@@ -673,6 +709,47 @@ function DashboardPage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Orçamento por Categoria */}
+        {budgetData.length > 0 && (
+          <Card className="glass-card">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-base">Orçamento por Categoria</CardTitle>
+                <p className="text-xs text-muted-foreground">Limite mensal vs. gasto atual</p>
+              </div>
+              <Badge variant="outline">
+                {budgetData.length} categoria{budgetData.length > 1 ? "s" : ""}
+              </Badge>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {budgetData.map((b) => {
+                const barColor =
+                  b.color === "danger"
+                    ? "bg-destructive"
+                    : b.color === "warning"
+                      ? "bg-yellow-500"
+                      : "bg-primary";
+                return (
+                  <div key={b.category} className="space-y-1.5">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="font-medium">{b.category}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {format(b.spent)} de {format(b.limit)} usados ({b.pct}%)
+                      </span>
+                    </div>
+                    <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
+                      <div
+                        className={`h-full rounded-full transition-all ${barColor}`}
+                        style={{ width: `${Math.min(100, b.pct)}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Row 3: Goals */}
         <div

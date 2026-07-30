@@ -17,9 +17,7 @@ import { Route as MetasRouteImport } from './routes/metas'
 import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
 import { Route as CategoriasRouteImport } from './routes/categorias'
 import { Route as CartoesRouteImport } from './routes/cartoes'
-import { Route as AssistenteRouteImport } from './routes/assistente'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as ApiClaudeRouteImport } from './routes/api/claude'
 
 const ReservaRoute = ReservaRouteImport.update({
   id: '/reserva',
@@ -61,25 +59,14 @@ const CartoesRoute = CartoesRouteImport.update({
   path: '/cartoes',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AssistenteRoute = AssistenteRouteImport.update({
-  id: '/assistente',
-  path: '/assistente',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiClaudeRoute = ApiClaudeRouteImport.update({
-  id: '/api/claude',
-  path: '/api/claude',
-  getParentRoute: () => rootRouteImport,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/assistente': typeof AssistenteRoute
   '/cartoes': typeof CartoesRoute
   '/categorias': typeof CategoriasRoute
   '/configuracoes': typeof ConfiguracoesRoute
@@ -88,11 +75,9 @@ export interface FileRoutesByFullPath {
   '/perfil': typeof PerfilRoute
   '/relatorios': typeof RelatoriosRoute
   '/reserva': typeof ReservaRoute
-  '/api/claude': typeof ApiClaudeRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/assistente': typeof AssistenteRoute
   '/cartoes': typeof CartoesRoute
   '/categorias': typeof CategoriasRoute
   '/configuracoes': typeof ConfiguracoesRoute
@@ -101,12 +86,10 @@ export interface FileRoutesByTo {
   '/perfil': typeof PerfilRoute
   '/relatorios': typeof RelatoriosRoute
   '/reserva': typeof ReservaRoute
-  '/api/claude': typeof ApiClaudeRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/assistente': typeof AssistenteRoute
   '/cartoes': typeof CartoesRoute
   '/categorias': typeof CategoriasRoute
   '/configuracoes': typeof ConfiguracoesRoute
@@ -115,13 +98,11 @@ export interface FileRoutesById {
   '/perfil': typeof PerfilRoute
   '/relatorios': typeof RelatoriosRoute
   '/reserva': typeof ReservaRoute
-  '/api/claude': typeof ApiClaudeRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/assistente'
     | '/cartoes'
     | '/categorias'
     | '/configuracoes'
@@ -130,11 +111,9 @@ export interface FileRouteTypes {
     | '/perfil'
     | '/relatorios'
     | '/reserva'
-    | '/api/claude'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/assistente'
     | '/cartoes'
     | '/categorias'
     | '/configuracoes'
@@ -143,11 +122,9 @@ export interface FileRouteTypes {
     | '/perfil'
     | '/relatorios'
     | '/reserva'
-    | '/api/claude'
   id:
     | '__root__'
     | '/'
-    | '/assistente'
     | '/cartoes'
     | '/categorias'
     | '/configuracoes'
@@ -156,12 +133,10 @@ export interface FileRouteTypes {
     | '/perfil'
     | '/relatorios'
     | '/reserva'
-    | '/api/claude'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AssistenteRoute: typeof AssistenteRoute
   CartoesRoute: typeof CartoesRoute
   CategoriasRoute: typeof CategoriasRoute
   ConfiguracoesRoute: typeof ConfiguracoesRoute
@@ -170,7 +145,6 @@ export interface RootRouteChildren {
   PerfilRoute: typeof PerfilRoute
   RelatoriosRoute: typeof RelatoriosRoute
   ReservaRoute: typeof ReservaRoute
-  ApiClaudeRoute: typeof ApiClaudeRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -231,13 +205,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CartoesRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/assistente': {
-      id: '/assistente'
-      path: '/assistente'
-      fullPath: '/assistente'
-      preLoaderRoute: typeof AssistenteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/': {
       id: '/'
       path: '/'
@@ -245,19 +212,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/claude': {
-      id: '/api/claude'
-      path: '/api/claude'
-      fullPath: '/api/claude'
-      preLoaderRoute: typeof ApiClaudeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AssistenteRoute: AssistenteRoute,
   CartoesRoute: CartoesRoute,
   CategoriasRoute: CategoriasRoute,
   ConfiguracoesRoute: ConfiguracoesRoute,
@@ -266,7 +225,6 @@ const rootRouteChildren: RootRouteChildren = {
   PerfilRoute: PerfilRoute,
   RelatoriosRoute: RelatoriosRoute,
   ReservaRoute: ReservaRoute,
-  ApiClaudeRoute: ApiClaudeRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

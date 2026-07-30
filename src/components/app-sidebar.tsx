@@ -10,7 +10,6 @@ import {
   User,
   Wallet,
   LogOut,
-  Sparkles,
 } from "lucide-react";
 import {
   Sidebar,
@@ -35,7 +34,6 @@ const items = [
   { title: "Metas", url: "/metas", icon: Target },
   { title: "Cartões", url: "/cartoes", icon: CreditCard },
   { title: "Relatórios", url: "/relatorios", icon: BarChart3 },
-  { title: "Assistente Claude", url: "/assistente", icon: Sparkles },
   { title: "Configurações", url: "/configuracoes", icon: Settings },
   { title: "Perfil", url: "/perfil", icon: User },
 ];
