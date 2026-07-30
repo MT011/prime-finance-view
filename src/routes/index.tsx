@@ -732,10 +732,10 @@ function DashboardPage() {
                       : "bg-primary";
                 return (
                   <div key={b.category} className="space-y-1.5">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="font-medium">{b.category}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {format(b.spent)} de {format(b.limit)} usados ({b.pct}%)
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-sm font-medium truncate">{b.category}</span>
+                      <span className="shrink-0 text-xs text-muted-foreground">
+                        {b.pct}%
                       </span>
                     </div>
                     <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
@@ -743,6 +743,13 @@ function DashboardPage() {
                         className={`h-full rounded-full transition-all ${barColor}`}
                         style={{ width: `${Math.min(100, b.pct)}%` }}
                       />
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      <span className="inline-flex flex-wrap gap-x-1">
+                        <span>{format(b.spent)}</span>
+                        <span>de {format(b.limit)}</span>
+                        <span>usados</span>
+                      </span>
                     </div>
                   </div>
                 );
