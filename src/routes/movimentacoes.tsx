@@ -379,7 +379,7 @@ function MovimentacoesPage() {
         });
         toast.success("Todas as parcelas atualizadas com sucesso!");
       } else {
-        await updateMovementMutation.mutateAsync({
+        const baseUpdate = {
           id: movementToEdit.id,
           date: editDate,
           description: editDescription.trim(),
@@ -395,8 +395,29 @@ function MovimentacoesPage() {
                 invoice_month: invoiceInfo?.monthKey || null,
               }
             : { nature: null, expense_type: null, card_id: null, invoice_month: null }),
-        });
-        toast.success("Movimentação atualizada com sucesso!");
+        };
+
+        const descriptionChanged = editDescription.trim() !== (movementToEdit.description || "");
+
+        if (descriptionChanged && (isInstallmentGroup || isRecurring)) {
+          await updateMovementMutation.mutateAsync({
+            ...baseUpdate,
+            descriptionGroupSync: {
+              groupId: (isInstallmentGroup
+                ? movementToEdit.installment_group_id
+                : movementToEdit.recurring_group_id) as string,
+              recurring: isRecurring,
+            },
+          });
+          toast.success(
+            isInstallmentGroup
+              ? "Descrição atualizada e replicada para todas as parcelas!"
+              : "Descrição atualizada e replicada para todas as parcelas da despesa fixa!",
+          );
+        } else {
+          await updateMovementMutation.mutateAsync(baseUpdate);
+          toast.success("Movimentação atualizada com sucesso!");
+        }
       }
 
       setIsEditDialogOpen(false);
@@ -1305,6 +1326,15 @@ function MovimentacoesPage() {
                   onChange={(e) => setEditDescription(e.target.value)}
                   disabled={editSaving}
                 />
+                {editMode === "single" &&
+                  (movementToEdit?.recurring_group_id ||
+                    (movementToEdit?.total_installments &&
+                      movementToEdit.total_installments > 1)) && (
+                    <p className="text-xs text-muted-foreground">
+                      Ao alterar a descrição, ela será replicada para todas as parcelas/meses do
+                      grupo.
+                    </p>
+                  )}
               </div>
             </div>
 

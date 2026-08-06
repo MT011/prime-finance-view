@@ -235,10 +235,20 @@ export function useUpdateMovement() {
         | (Partial<Movement> & {
             id: string;
             recurringGroupId?: string;
+          })
+        | (Partial<Movement> & {
+            id: string;
+            descriptionGroupSync?: { groupId: string; recurring: boolean };
           }),
     ) => {
-      const { id, editAllInstallments, installmentGroupId, recurringGroupId, ...data } =
-        input as any;
+      const {
+        id,
+        editAllInstallments,
+        installmentGroupId,
+        recurringGroupId,
+        descriptionGroupSync,
+        ...data
+      } = input as any;
       const userId = await getUserId();
 
       if (recurringGroupId) {
@@ -258,6 +268,26 @@ export function useUpdateMovement() {
           .eq("installment_group_id", installmentGroupId)
           .eq("user_id", userId);
         if (error) throw error;
+        return;
+      }
+
+      if (descriptionGroupSync) {
+        const { groupId, recurring } = descriptionGroupSync;
+        const { error } = await supabase
+          .from("movements")
+          .update(data)
+          .eq("id", id)
+          .eq("user_id", userId);
+        if (error) throw error;
+        if (data.description !== undefined) {
+          const { error: syncError } = await supabase
+            .from("movements")
+            .update({ description: data.description })
+            .eq(recurring ? "recurring_group_id" : "installment_group_id", groupId)
+            .eq("user_id", userId);
+          if (syncError) throw syncError;
+        }
+        return;
       } else {
         const { error } = await supabase
           .from("movements")
