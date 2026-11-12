@@ -230,7 +230,7 @@ export function NewMovementFab() {
       <DialogTrigger asChild>
         <Button
           size="icon"
-          className="fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full bg-gradient-to-br from-primary to-primary/70 text-primary-foreground shadow-xl shadow-primary/40 transition-all hover:scale-105 hover:shadow-primary/60"
+          className="fixed bottom-24 right-5 z-50 h-13 w-13 rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/25 transition-all hover:scale-105 md:bottom-6 md:right-6 md:h-14 md:w-14"
           aria-label="Nova movimentação"
         >
           <Plus className="h-6 w-6" />
