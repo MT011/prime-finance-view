@@ -85,7 +85,7 @@ function DashboardPage() {
           </Button>
         </section>
 
-        <section className="overflow-hidden rounded-3xl bg-[#14243A] p-5 text-white shadow-[0_12px_32px_rgba(20,36,58,.16)] md:p-7">
+        <section className="blue-glow-hero rounded-3xl p-5 text-white md:p-7">
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-sm text-white/70">Saldo disponível</p>
