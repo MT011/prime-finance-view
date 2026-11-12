@@ -10,6 +10,7 @@ import {
   User,
   Wallet,
   LogOut,
+  MoreHorizontal,
 } from "lucide-react";
 import {
   Sidebar,
@@ -64,7 +65,8 @@ export function AppSidebar() {
   const initial = name.charAt(0).toUpperCase();
 
   return (
-    <Sidebar collapsible="icon" className="border-r border-sidebar-border">
+    <>
+    <Sidebar collapsible="icon" className="hidden border-r border-sidebar-border md:flex">
       <SidebarHeader className="border-b border-sidebar-border">
         <div className="flex items-center gap-3 px-2 py-3">
           <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-primary to-primary/60 shadow-lg shadow-primary/30">
@@ -133,5 +135,23 @@ export function AppSidebar() {
         </div>
       </SidebarFooter>
     </Sidebar>
+    <nav aria-label="Navegação principal" className="fixed inset-x-0 bottom-0 z-50 grid grid-cols-5 border-t border-border/80 bg-background/95 px-1 pb-[max(env(safe-area-inset-bottom),8px)] pt-2 shadow-[0_-8px_30px_rgba(0,0,0,0.22)] backdrop-blur-xl md:hidden">
+      {[
+        { title: "Início", url: "/", icon: LayoutDashboard },
+        { title: "Lançamentos", url: "/movimentacoes", icon: ArrowLeftRight },
+        { title: "Cartões", url: "/cartoes", icon: CreditCard },
+        { title: "Metas", url: "/metas", icon: Target },
+        { title: "Mais", url: "/relatorios", icon: MoreHorizontal },
+      ].map((item) => {
+        const active = item.url === "/" ? pathname === "/" : pathname === item.url || pathname.startsWith(item.url + "/");
+        return (
+          <Link key={item.title} to={item.url} className={`flex min-w-0 flex-col items-center gap-1 rounded-xl px-1 py-1.5 text-[10px] font-medium transition-colors ${active ? "text-primary" : "text-muted-foreground"}`}>
+            <item.icon className={`h-5 w-5 ${active ? "stroke-[2.5]" : ""}`} />
+            <span>{item.title}</span>
+          </Link>
+        );
+      })}
+    </nav>
+    </>
   );
 }
