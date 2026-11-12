@@ -1,1019 +1,194 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useMemo } from "react";
 import { AppHeader } from "@/components/app-header";
 import { NewMovementFab } from "@/components/new-movement-fab";
 import { useValueVisibility } from "@/lib/value-visibility";
-import {
-  ArrowDownRight,
-  ArrowUpRight,
-  CreditCard,
-  Eye,
-  EyeOff,
-  PiggyBank,
-  Sparkles,
-  TrendingDown,
-  TrendingUp,
-  Wallet,
-} from "lucide-react";
+import { useMovements, useGoals, useCreditCards } from "@/hooks/queries";
+import { parseLocalDate, getCurrentInvoiceMonthKey } from "@/lib/credit-cards";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  Cell,
-  Legend,
-  Pie,
-  PieChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
-import {
-  useMovements,
-  useGoals,
-  useEmergencySavings,
-  useCreditCards,
-  useCategoryBudgets,
-} from "@/hooks/queries";
-import { Loader2 } from "lucide-react";
-import { useMemo, useState } from "react";
-import {
-  getCurrentInvoiceMonthKey,
-  getNextInvoiceMonthKey,
-  getInvoiceMonthLabel,
-  parseLocalDate,
-} from "@/lib/credit-cards";
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
-} from "@/components/ui/carousel";
+import { Eye, EyeOff, ArrowDownLeft, ArrowUpRight, Wallet, CreditCard, Target, ChevronRight, Plus, CalendarDays } from "lucide-react";
 
 export const Route = createFileRoute("/")({
-  head: () => ({
-    meta: [
-      { title: "Dashboard — Finance Dashboard" },
-      {
-        name: "description",
-        content: "Visão geral das suas finanças pessoais: saldo, receitas, despesas e metas.",
-      },
-    ],
-  }),
+  head: () => ({ meta: [
+    { title: "Início — Prime Finance" },
+    { name: "description", content: "Uma visão simples e clara da sua vida financeira." },
+  ] }),
   component: DashboardPage,
 });
 
-function StatCard({
-  label,
-  value,
-  delta,
-  deltaPositive,
-  icon,
-  accent,
-  action,
-  progress,
-  progressLabel,
-}: {
-  label: string;
-  value: string;
-  delta?: string;
-  deltaPositive?: boolean;
-  icon: React.ReactNode;
-  accent: "success" | "danger" | "info" | "neutral";
-  action?: React.ReactNode;
-  progress?: number;
-  progressLabel?: string;
-}) {
-  const accentClass = {
-    success: "gradient-success border-primary/30",
-    danger: "gradient-danger border-destructive/30",
-    info: "gradient-info border-info/30",
-    neutral: "border-border/60",
-  }[accent];
-  const iconClass = {
-    success: "bg-primary/20 text-primary",
-    danger: "bg-destructive/20 text-destructive",
-    info: "bg-info/20 text-info",
-    neutral: "bg-muted text-muted-foreground",
-  }[accent];
-
-  return (
-    <Card className={`glass-card card-hover overflow-hidden ${accentClass}`}>
-      <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
-        <div className="space-y-1">
-          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-            {label}
-          </p>
-        </div>
-        <div className={`grid h-10 w-10 place-items-center rounded-xl ${iconClass}`}>{icon}</div>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <div className="flex items-end justify-between gap-2">
-          <span className="text-2xl font-bold tracking-tight md:text-3xl">{value}</span>
-          {action}
-        </div>
-        {delta && (
-          <div className="flex items-center gap-1.5 text-xs">
-            <span
-              className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-medium ${
-                deltaPositive ? "bg-primary/15 text-primary" : "bg-destructive/15 text-destructive"
-              }`}
-            >
-              {deltaPositive ? (
-                <ArrowUpRight className="h-3 w-3" />
-              ) : (
-                <ArrowDownRight className="h-3 w-3" />
-              )}
-              {delta}
-            </span>
-            <span className="text-muted-foreground">vs mês anterior</span>
-          </div>
-        )}
-        {progress !== undefined && (
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span>{progressLabel}</span>
-              <span className="font-medium text-foreground">{progress}%</span>
-            </div>
-            <Progress value={progress} className="h-1.5" />
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-function ChartTooltip({ active, payload, label }: any) {
-  if (!active || !payload?.length) return null;
-  return (
-    <div className="glass-card rounded-lg px-3 py-2 text-xs shadow-xl">
-      <p className="mb-1 font-medium text-foreground">{label}</p>
-      {payload.map((p: any) => (
-        <div key={p.dataKey} className="flex items-center gap-2">
-          <span
-            className="h-2 w-2 rounded-full"
-            style={{ backgroundColor: p.color || p.payload?.color }}
-          />
-          <span className="text-muted-foreground">{p.name}:</span>
-          <span className="font-medium text-foreground">
-            {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(p.value)}
-          </span>
-        </div>
-      ))}
-    </div>
-  );
-}
+const money = (value: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
 
 function DashboardPage() {
   const { hidden, toggle, format } = useValueVisibility();
   const navigate = useNavigate();
+  const { data: movements = [], isLoading: loadingMovements } = useMovements();
+  const { data: goals = [], isLoading: loadingGoals } = useGoals();
+  const { data: cards = [] } = useCreditCards();
 
-  const { data: movements = [], isLoading: isLoadingMovements } = useMovements();
-  const { data: goals = [], isLoading: isLoadingGoals } = useGoals();
-  const { data: emergencySavings = [], isLoading: isLoadingSavings } = useEmergencySavings();
-  const { data: creditCards = [] } = useCreditCards();
-  const { data: budgets = [] } = useCategoryBudgets();
-
-  const {
-    saldoAtual,
-    receitasMes,
-    despesasMes,
-    economia,
-    patrimonio,
-    reservaAtual,
-    reservaMeta,
-    metaGuardar,
-    guardadoMes,
-    receitasPrev,
-    despesasPrev,
-    economiaPrev,
-    dashboardGoals,
-  } = useMemo(() => {
-    const currentMonth = new Date().getMonth();
-    const currentYear = new Date().getFullYear();
-
-    const prevMonth = currentMonth === 0 ? 11 : currentMonth - 1;
-    const prevMonthYear = currentMonth === 0 ? currentYear - 1 : currentYear;
-
-    let saldo = 0;
-    let recMes = 0;
-    let desMes = 0;
-    let recPrev = 0;
-    let desPrev = 0;
-
+  const summary = useMemo(() => {
     const now = new Date();
-    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-
-    movements.forEach((m) => {
-      const d = parseLocalDate(m.date);
-      const mDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-      const isCurrentMonth = d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-      const isPrevMonth = d.getMonth() === prevMonth && d.getFullYear() === prevMonthYear;
-
-      const amt = Number(m.amount);
-      if (m.type === "receita") {
-        saldo += amt;
-        if (isCurrentMonth) recMes += amt;
-        if (isPrevMonth) recPrev += amt;
+    const month = now.getMonth();
+    const year = now.getFullYear();
+    let income = 0;
+    let expenses = 0;
+    let balance = 0;
+    const thisMonth = movements.filter((item) => {
+      const date = parseLocalDate(item.date);
+      return date.getMonth() === month && date.getFullYear() === year;
+    });
+    movements.forEach((item) => {
+      const amount = Number(item.amount) || 0;
+      const date = parseLocalDate(item.date);
+      const isCurrentOrPast = date <= now;
+      if (item.type === "receita") {
+        balance += amount;
+        if (date.getMonth() === month && date.getFullYear() === year) income += amount;
       } else {
-        if ((m.nature === "debito" || m.nature === "pix") && mDateStr <= todayStr) {
-          saldo -= amt;
-        }
-        if (isCurrentMonth) desMes += amt;
-        if (isPrevMonth) desPrev += amt;
+        if (date.getMonth() === month && date.getFullYear() === year) expenses += amount;
+        if (isCurrentOrPast && (item.nature === "debito" || item.nature === "pix")) balance -= amount;
       }
     });
-
-    const eco = recMes - desMes;
-    const ecoPrev = recPrev - desPrev;
-
-    const lastEmergencyValue =
-      emergencySavings.length > 0 ? Number(emergencySavings[emergencySavings.length - 1].value) : 0;
-
-    const sortedGoals = [...goals].sort((a, b) => {
-      const aDate = new Date(a.created_at || 0).getTime();
-      const bDate = new Date(b.created_at || 0).getTime();
-      return aDate - bDate;
-    });
-
-    const emergencyGoal = sortedGoals.find((g) => {
-      const title = (g.title || "").toLowerCase();
-      const period = (g.period || "").toLowerCase();
-      return (
-        title.includes("reserva") || title.includes("emergência") || period.includes("reserva")
-      );
-    });
-    const monthlyGoal =
-      sortedGoals.find((g) => {
-        const title = (g.title || "").toLowerCase();
-        const period = (g.period || "").toLowerCase();
-        return (
-          title.includes("economia") ||
-          title.includes("mensal") ||
-          title.includes("meta") ||
-          period.includes("mensal")
-        );
-      }) || sortedGoals[0];
-
-    const goalsCurrent = goals.reduce((sum, g) => sum + Number(g.current || 0), 0);
-    const pat = saldo + goalsCurrent + (lastEmergencyValue || 0);
-
-    return {
-      saldoAtual: saldo,
-      receitasMes: recMes,
-      despesasMes: desMes,
-      economia: eco,
-      patrimonio: pat,
-      reservaAtual: lastEmergencyValue || Number(emergencyGoal?.current || 0),
-      reservaMeta: Number(emergencyGoal?.target || 0),
-      metaGuardar: monthlyGoal ? Number(monthlyGoal.target) : 0,
-      guardadoMes: eco > 0 ? eco : 0,
-      receitasPrev: recPrev,
-      despesasPrev: desPrev,
-      economiaPrev: ecoPrev,
-      dashboardGoals: sortedGoals,
-    };
-  }, [movements, goals, emergencySavings]);
-
-  const cardSummaries = useMemo(() => {
-    return creditCards.map((card) => {
-      const currentMonthKey = getCurrentInvoiceMonthKey(card);
-      const nextMonthKey = getNextInvoiceMonthKey(card);
-      const currentTotal = movements
-        .filter((m) => m.card_id === card.id && m.invoice_month === currentMonthKey)
-        .reduce((sum, m) => sum + Number(m.amount), 0);
-      const nextTotal = movements
-        .filter((m) => m.card_id === card.id && m.invoice_month === nextMonthKey)
-        .reduce((sum, m) => sum + Number(m.amount), 0);
-      const limit = Number(card.limit);
-      return {
-        ...card,
-        currentTotal,
-        nextTotal,
-        usedPercent: limit > 0 ? Math.min(100, (currentTotal / limit) * 100) : 0,
-      };
-    });
-  }, [creditCards, movements]);
-
-  const monthlyEvolution = useMemo(() => {
-    const monthsMap: Record<
-      string,
-      { receitas: number; despesas: number; despesas_imediatas: number }
-    > = {};
-    const monthsShort = [
-      "Jan",
-      "Fev",
-      "Mar",
-      "Abr",
-      "Mai",
-      "Jun",
-      "Jul",
-      "Ago",
-      "Set",
-      "Out",
-      "Nov",
-      "Dez",
-    ];
-    const currentYear = new Date().getFullYear();
-
-    for (let i = 0; i < 12; i++) {
-      monthsMap[monthsShort[i]] = { receitas: 0, despesas: 0, despesas_imediatas: 0 };
-    }
-
-    const sortedMovements = [...movements].sort(
-      (a, b) => parseLocalDate(a.date).getTime() - parseLocalDate(b.date).getTime(),
-    );
-
-    let runningBalance = 0;
-    sortedMovements.forEach((m) => {
-      const d = parseLocalDate(m.date);
-      if (d.getFullYear() === currentYear) {
-        const monthName = monthsShort[d.getMonth()];
-        const amt = Number(m.amount);
-        if (m.type === "receita") {
-          monthsMap[monthName].receitas += amt;
-        } else {
-          monthsMap[monthName].despesas += amt;
-          if (m.nature === "debito" || m.nature === "pix") {
-            monthsMap[monthName].despesas_imediatas += amt;
-          }
-        }
-      }
-    });
-
-    return monthsShort.map((month) => {
-      const data = monthsMap[month];
-      runningBalance += data.receitas - data.despesas_imediatas;
-      return {
-        month,
-        receitas: data.receitas,
-        despesas: data.despesas,
-        saldo: runningBalance,
-      };
-    });
+    const recent = [...movements].sort((a,b) => parseLocalDate(b.date).getTime() - parseLocalDate(a.date).getTime()).slice(0,5);
+    const topExpenses = thisMonth.filter(x => x.type === "despesa").reduce((acc, item) => {
+      const key = item.category || "Outros";
+      acc[key] = (acc[key] || 0) + Number(item.amount || 0);
+      return acc;
+    }, {} as Record<string, number>);
+    const categories = Object.entries(topExpenses).sort((a,b) => b[1]-a[1]).slice(0,4);
+    return { income, expenses, balance, savings: income-expenses, recent, categories };
   }, [movements]);
 
-  const categoriesData = useMemo(() => {
-    const catMap: Record<string, number> = {};
-    const currentMonth = new Date().getMonth();
-    const currentYear = new Date().getFullYear();
+  const goalPreview = goals.slice(0,2);
+  const cardPreview = cards.slice(0,2).map(card => {
+    const invoiceMonth = getCurrentInvoiceMonthKey(card);
+    const total = movements.filter(m => m.card_id === card.id && m.invoice_month === invoiceMonth)
+      .reduce((sum,m) => sum + Number(m.amount || 0),0);
+    return { ...card, total };
+  });
+  const monthLabel = new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(new Date());
 
-    movements.forEach((m) => {
-      const d = parseLocalDate(m.date);
-      if (
-        m.type === "despesa" &&
-        d.getMonth() === currentMonth &&
-        d.getFullYear() === currentYear
-      ) {
-        catMap[m.category] = (catMap[m.category] || 0) + Number(m.amount);
-      }
-    });
-
-    const colorPalette = [
-      "oklch(0.78 0.17 150)",
-      "oklch(0.72 0.13 240)",
-      "oklch(0.82 0.16 80)",
-      "oklch(0.65 0.22 25)",
-      "oklch(0.7 0.18 300)",
-      "oklch(0.85 0.14 40)",
-      "oklch(0.6 0.15 200)",
-      "oklch(0.75 0.14 120)",
-      "oklch(0.68 0.16 170)",
-      "oklch(0.5 0.02 260)",
-    ];
-
-    return Object.entries(catMap).map(([name, value], i) => ({
-      name,
-      value,
-      color: colorPalette[i % colorPalette.length],
-    }));
-  }, [movements]);
-
-  const expenseTypeData = useMemo(() => {
-    const currentMonth = new Date().getMonth();
-    const currentYear = new Date().getFullYear();
-    let fixo = 0;
-    let variavel = 0;
-
-    movements.forEach((m) => {
-      const d = parseLocalDate(m.date);
-      if (
-        m.type === "despesa" &&
-        d.getMonth() === currentMonth &&
-        d.getFullYear() === currentYear
-      ) {
-        if (m.expense_type === "fixo") {
-          fixo += Number(m.amount);
-        } else {
-          variavel += Number(m.amount);
-        }
-      }
-    });
-
-    const total = fixo + variavel;
-    return {
-      fixo,
-      variavel,
-      total,
-      fixoPercent: total > 0 ? Math.round((fixo / total) * 100) : 0,
-      variavelPercent: total > 0 ? Math.round((variavel / total) * 100) : 0,
-    };
-  }, [movements]);
-
-  const budgetData = useMemo(() => {
-    const budgetsMap: Record<string, number> = {};
-    budgets.forEach((b) => {
-      budgetsMap[b.category] = b.monthly_limit;
-    });
-
-    const spentMap: Record<string, number> = {};
-    categoriesData.forEach((c) => {
-      spentMap[c.name] = c.value;
-    });
-
-    return Object.entries(budgetsMap)
-      .filter(([cat]) => spentMap[cat] !== undefined)
-      .map(([category, limit]) => {
-        const spent = spentMap[category];
-        const pct = limit > 0 ? Math.round((spent / limit) * 100) : 0;
-        let color: "success" | "warning" | "danger";
-        if (pct > 100) {
-          color = "danger";
-        } else if (pct >= 80) {
-          color = "warning";
-        } else {
-          color = "success";
-        }
-        return { category, spent, limit, pct, color };
-      })
-      .sort((a, b) => b.pct - a.pct);
-  }, [budgets, categoriesData]);
-
-  if (isLoadingMovements || isLoadingGoals || isLoadingSavings) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-2">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <span className="text-sm text-muted-foreground">Carregando painel financeiro...</span>
-        </div>
-      </div>
-    );
+  if (loadingMovements || loadingGoals) {
+    return <div className="flex min-h-[60vh] items-center justify-center text-sm text-muted-foreground">Carregando suas finanças...</div>;
   }
 
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="min-h-screen">
       <AppHeader greeting />
+      <main className="mx-auto w-full max-w-7xl space-y-5 px-4 pb-28 pt-5 md:space-y-7 md:px-8 md:pb-10 md:pt-8">
+        <section className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[.14em] text-muted-foreground">Visão geral</p>
+            <h2 className="mt-1 text-lg font-semibold capitalize text-foreground">{monthLabel}</h2>
+          </div>
+          <Button onClick={() => navigate({ to: "/movimentacoes" })} variant="outline" size="sm" className="rounded-full border-border bg-card">
+            <CalendarDays className="mr-2 h-4 w-4" /> Ver mês
+          </Button>
+        </section>
 
-      <main className="flex-1 space-y-6 p-4 md:p-8">
-        {/* Row 1: Stat cards */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <StatCard
-            label="Saldo Atual"
-            value={format(saldoAtual)}
-            icon={<Wallet className="h-5 w-5" />}
-            accent="info"
-            action={
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-8 w-8 rounded-full"
-                onClick={toggle}
-                aria-label={hidden ? "Mostrar valores" : "Ocultar valores"}
-              >
-                {hidden ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </Button>
-            }
-          />
-          <StatCard
-            label="Receitas do mês"
-            value={format(receitasMes)}
-            icon={<TrendingUp className="h-5 w-5" />}
-            accent="success"
-          />
-          <StatCard
-            label="Despesas do mês"
-            value={format(despesasMes)}
-            icon={<TrendingDown className="h-5 w-5" />}
-            accent="danger"
-          />
-          <StatCard
-            label="Economia do mês"
-            value={format(economia)}
-            icon={<PiggyBank className="h-5 w-5" />}
-            accent="success"
-            progress={metaGuardar > 0 ? Math.max(0, Math.round((economia / metaGuardar) * 100)) : 0}
-            progressLabel="Meta atingida"
-          />
-        </div>
-
-        {/* Row 2: Charts */}
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-          <Card className="glass-card lg:col-span-2">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle className="text-base">Evolução Financeira</CardTitle>
-                <p className="text-xs text-muted-foreground">Receitas, despesas e saldo</p>
-              </div>
-              <Badge variant="secondary" className="gap-1">
-                <Sparkles className="h-3 w-3" />
-                {new Date().getFullYear()}
-              </Badge>
-            </CardHeader>
-            <CardContent className="h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={monthlyEvolution} margin={{ left: -10, right: 8, top: 8 }}>
-                  <defs>
-                    <linearGradient id="gRec" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="oklch(0.78 0.17 150)" stopOpacity={0.6} />
-                      <stop offset="100%" stopColor="oklch(0.78 0.17 150)" stopOpacity={0} />
-                    </linearGradient>
-                    <linearGradient id="gDes" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="oklch(0.65 0.22 25)" stopOpacity={0.5} />
-                      <stop offset="100%" stopColor="oklch(0.65 0.22 25)" stopOpacity={0} />
-                    </linearGradient>
-                    <linearGradient id="gSal" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="oklch(0.72 0.13 240)" stopOpacity={0.5} />
-                      <stop offset="100%" stopColor="oklch(0.72 0.13 240)" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid
-                    strokeDasharray="3 6"
-                    stroke="oklch(0.3 0.012 260 / 40%)"
-                    vertical={false}
-                  />
-                  <XAxis
-                    dataKey="month"
-                    stroke="oklch(0.6 0.02 260)"
-                    fontSize={11}
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                  <YAxis
-                    stroke="oklch(0.6 0.02 260)"
-                    fontSize={11}
-                    tickLine={false}
-                    axisLine={false}
-                    tickFormatter={(v) => `${v / 1000}k`}
-                  />
-                  <Tooltip content={<ChartTooltip />} />
-                  <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />
-                  <Area
-                    type="monotone"
-                    name="Receitas"
-                    dataKey="receitas"
-                    stroke="oklch(0.78 0.17 150)"
-                    strokeWidth={2}
-                    fill="url(#gRec)"
-                  />
-                  <Area
-                    type="monotone"
-                    name="Despesas"
-                    dataKey="despesas"
-                    stroke="oklch(0.65 0.22 25)"
-                    strokeWidth={2}
-                    fill="url(#gDes)"
-                  />
-                  <Area
-                    type="monotone"
-                    name="Saldo"
-                    dataKey="saldo"
-                    stroke="oklch(0.72 0.13 240)"
-                    strokeWidth={2}
-                    fill="url(#gSal)"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-
-          <Card className="glass-card">
-            <CardContent className="pt-6">
-              <Carousel opts={{ align: "start", loop: true }}>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-base">Gastos por Categoria</CardTitle>
-                    <p className="text-xs text-muted-foreground">Distribuição do mês</p>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <CarouselPrevious className="relative static h-7 w-7 translate-y-0" />
-                    <CarouselNext className="relative static h-7 w-7 translate-y-0" />
-                  </div>
-                </div>
-                <CarouselContent className="mt-3">
-                  {/* Slide 1: Gráfico de pizza por categoria */}
-                  <CarouselItem>
-                    <div className="h-52">
-                      {categoriesData.length > 0 ? (
-                        <ResponsiveContainer width="100%" height="100%">
-                          <PieChart>
-                            <Tooltip content={<ChartTooltip />} />
-                            <Pie
-                              data={categoriesData}
-                              dataKey="value"
-                              nameKey="name"
-                              innerRadius={50}
-                              outerRadius={80}
-                              paddingAngle={2}
-                              stroke="none"
-                            >
-                              {categoriesData.map((c) => (
-                                <Cell key={c.name} fill={c.color} />
-                              ))}
-                            </Pie>
-                          </PieChart>
-                        </ResponsiveContainer>
-                      ) : (
-                        <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-                          Sem despesas este mês
-                        </div>
-                      )}
-                    </div>
-                    <div className="mt-3 grid grid-cols-2 gap-1.5 text-xs">
-                      {categoriesData.slice(0, 8).map((c) => (
-                        <div key={c.name} className="flex items-center gap-1.5">
-                          <span
-                            className="h-2 w-2 shrink-0 rounded-full"
-                            style={{ backgroundColor: c.color }}
-                          />
-                          <span className="truncate text-muted-foreground">{c.name}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </CarouselItem>
-
-                  {/* Slide 2: Fixo vs Variável */}
-                  <CarouselItem>
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-center gap-6 pt-2">
-                        <div className="text-center">
-                          <p className="text-3xl font-bold text-primary">
-                            {expenseTypeData.fixoPercent}%
-                          </p>
-                          <p className="text-xs text-muted-foreground mt-1">Fixos</p>
-                          <p className="text-sm font-medium">{format(expenseTypeData.fixo)}</p>
-                        </div>
-                        <div className="h-12 w-px bg-border" />
-                        <div className="text-center">
-                          <p className="text-3xl font-bold text-destructive">
-                            {expenseTypeData.variavelPercent}%
-                          </p>
-                          <p className="text-xs text-muted-foreground mt-1">Variáveis</p>
-                          <p className="text-sm font-medium">{format(expenseTypeData.variavel)}</p>
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="text-muted-foreground">Fixos</span>
-                          <span className="font-medium">{format(expenseTypeData.fixo)}</span>
-                        </div>
-                        <div className="h-3 w-full overflow-hidden rounded-full bg-secondary">
-                          <div
-                            className="h-full rounded-full bg-primary transition-all"
-                            style={{ width: `${expenseTypeData.fixoPercent}%` }}
-                          />
-                        </div>
-
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="text-muted-foreground">Variáveis</span>
-                          <span className="font-medium">{format(expenseTypeData.variavel)}</span>
-                        </div>
-                        <div className="h-3 w-full overflow-hidden rounded-full bg-secondary">
-                          <div
-                            className="h-full rounded-full bg-destructive transition-all"
-                            style={{ width: `${expenseTypeData.variavelPercent}%` }}
-                          />
-                        </div>
-                      </div>
-
-                      <div className="rounded-lg bg-secondary/50 p-3 text-center">
-                        <p className="text-xs text-muted-foreground">Total do mês</p>
-                        <p className="text-lg font-bold">{format(expenseTypeData.total)}</p>
-                      </div>
-                    </div>
-                  </CarouselItem>
-                </CarouselContent>
-              </Carousel>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Orçamento por Categoria */}
-        {budgetData.length > 0 && (
-          <Card className="glass-card">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle className="text-base">Orçamento por Categoria</CardTitle>
-                <p className="text-xs text-muted-foreground">Limite mensal vs. gasto atual</p>
-              </div>
-              <Badge variant="outline">
-                {budgetData.length} categoria{budgetData.length > 1 ? "s" : ""}
-              </Badge>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {budgetData.map((b) => {
-                const barColor =
-                  b.color === "danger"
-                    ? "bg-destructive"
-                    : b.color === "warning"
-                      ? "bg-yellow-500"
-                      : "bg-primary";
-                return (
-                  <div key={b.category} className="space-y-1.5">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-sm font-medium truncate">{b.category}</span>
-                      <span className="shrink-0 text-xs text-muted-foreground">
-                        {b.pct}%
-                      </span>
-                    </div>
-                    <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
-                      <div
-                        className={`h-full rounded-full transition-all ${barColor}`}
-                        style={{ width: `${Math.min(100, b.pct)}%` }}
-                      />
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      <span className="inline-flex flex-wrap gap-x-1">
-                        <span>{format(b.spent)}</span>
-                        <span>de {format(b.limit)}</span>
-                        <span>usados</span>
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Row 3: Goals */}
-        <div
-          className={`grid grid-cols-1 gap-4 ${dashboardGoals.length > 0 ? "lg:grid-cols-3" : "lg:grid-cols-1"}`}
-        >
-          {dashboardGoals.map((goal: any) => {
-            const current = Number(goal.current || 0);
-            const target = Number(goal.target || 0);
-            const pct =
-              target > 0 ? Math.max(0, Math.min(100, Math.round((current / target) * 100))) : 0;
-            const isEmergency =
-              (goal.title || "").toLowerCase().includes("reserva") ||
-              (goal.title || "").toLowerCase().includes("emergência") ||
-              (goal.period || "").toLowerCase().includes("reserva");
-
-            return (
-              <Card key={goal.id || goal.title} className="glass-card card-hover">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-base">{goal.title}</CardTitle>
-                    <Badge
-                      variant="secondary"
-                      className={
-                        isEmergency ? "bg-info/15 text-info" : "bg-primary/15 text-primary"
-                      }
-                    >
-                      {pct}%
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {goal.description && (
-                    <p className="text-sm text-muted-foreground">{goal.description}</p>
-                  )}
-                  <div className="flex items-end justify-between">
-                    <div>
-                      <p className="text-xs text-muted-foreground">Atual</p>
-                      <p className="text-2xl font-bold">{format(current)}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-xs text-muted-foreground">Meta</p>
-                      <p className="text-sm font-medium">{format(target)}</p>
-                    </div>
-                  </div>
-                  <Progress value={pct} className="h-2" />
-                  <p className="text-xs text-muted-foreground">
-                    Faltam {format(Math.max(0, target - current))} para atingir sua meta.
-                  </p>
-                </CardContent>
-              </Card>
-            );
-          })}
-
-          <Card className="glass-card card-hover">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base">Patrimônio</CardTitle>
-                <Badge className="gap-1 bg-primary/20 text-primary hover:bg-primary/20">
-                  <TrendingUp className="h-3 w-3" /> +18%
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <p className="text-3xl font-bold tracking-tight">{format(patrimonio)}</p>
-              <div className="h-16">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={monthlyEvolution}>
-                    <defs>
-                      <linearGradient id="gPat" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="oklch(0.78 0.17 150)" stopOpacity={0.6} />
-                        <stop offset="100%" stopColor="oklch(0.78 0.17 150)" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <Area
-                      type="monotone"
-                      dataKey="saldo"
-                      stroke="oklch(0.78 0.17 150)"
-                      strokeWidth={2}
-                      fill="url(#gPat)"
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Evolução consistente nos últimos 6 meses.
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Comparativo */}
-        <Card className="glass-card">
-          <CardHeader>
-            <CardTitle className="text-base">Comparativo Mensal</CardTitle>
-            <p className="text-xs text-muted-foreground">Este mês vs. mês anterior</p>
-          </CardHeader>
-          <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            {[
-              { label: "Receita", now: receitasMes, prev: receitasPrev },
-              { label: "Despesa", now: despesasMes, prev: despesasPrev },
-              { label: "Economia", now: economia, prev: economiaPrev },
-            ].map((r) => {
-              const diff = r.prev === 0 ? (r.now > 0 ? 100 : 0) : ((r.now - r.prev) / r.prev) * 100;
-              const up = r.label === "Despesa" ? diff < 0 : diff > 0;
-              return (
-                <div
-                  key={r.label}
-                  className="rounded-xl border border-border/60 bg-background/40 p-4"
-                >
-                  <p className="text-xs uppercase tracking-wider text-muted-foreground">
-                    {r.label}
-                  </p>
-                  <p className="mt-2 text-2xl font-bold">{format(r.now)}</p>
-                  <div className="mt-2 flex items-center gap-2 text-xs">
-                    <span
-                      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-medium ${
-                        up ? "bg-primary/15 text-primary" : "bg-destructive/15 text-destructive"
-                      }`}
-                    >
-                      {up ? (
-                        <ArrowUpRight className="h-3 w-3" />
-                      ) : (
-                        <ArrowDownRight className="h-3 w-3" />
-                      )}
-                      {Math.abs(diff).toFixed(1)}%
-                    </span>
-                    <span className="text-muted-foreground">era {format(r.prev)}</span>
-                  </div>
-                </div>
-              );
-            })}
-          </CardContent>
-        </Card>
-
-        {/* Resumo dos Cartões de Crédito */}
-        {cardSummaries.length > 0 && (
-          <Card className="glass-card">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle className="text-base">Resumo dos Cartões de Crédito</CardTitle>
-                <p className="text-xs text-muted-foreground">Faturas atuais e próximas</p>
-              </div>
-              <Badge variant="outline">
-                {cardSummaries.length} cartão{cardSummaries.length > 1 ? "ões" : ""}
-              </Badge>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-                {cardSummaries.map((card) => (
-                  <button
-                    key={card.id}
-                    onClick={() =>
-                      navigate({ to: "/movimentacoes", search: { card: card.id, tab: "atual" } })
-                    }
-                    className="group relative overflow-hidden rounded-xl border border-border/60 bg-gradient-to-br from-background/80 to-accent/20 p-5 text-left transition-all hover:border-primary/40 hover:shadow-lg hover:shadow-primary/10 active:scale-[0.98]"
-                  >
-                    <div className="mb-3 flex items-center gap-3">
-                      <div className="grid h-10 w-10 place-items-center rounded-lg bg-primary/15 text-primary">
-                        <CreditCard className="h-5 w-5" />
-                      </div>
-                      <div>
-                        <p className="font-semibold">{card.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          Vencimento dia {card.due_day}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <p className="text-xs text-muted-foreground">Fatura Atual</p>
-                        <p className="text-lg font-bold">{format(card.currentTotal)}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground">Próxima Fatura</p>
-                        <p className="text-lg font-bold">{format(card.nextTotal)}</p>
-                      </div>
-                    </div>
-                    <div className="mt-3">
-                      <div className="flex items-center justify-between text-xs text-muted-foreground">
-                        <span>Limite utilizado</span>
-                        <span>{Math.round(card.usedPercent)}%</span>
-                      </div>
-                      <div className="mt-1 h-2 overflow-hidden rounded-full bg-muted">
-                        <div
-                          className="h-full rounded-full bg-gradient-to-r from-primary to-primary/60 transition-all"
-                          style={{ width: `${card.usedPercent}%` }}
-                        />
-                      </div>
-                    </div>
-                    <div className="absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-primary/0 via-primary/50 to-primary/0 opacity-0 transition-opacity group-hover:opacity-100" />
-                  </button>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Fluxo Financeiro */}
-        <Card className="glass-card">
-          <CardHeader className="flex flex-row items-center justify-between">
+        <section className="overflow-hidden rounded-3xl bg-[#14243A] p-5 text-white shadow-[0_12px_32px_rgba(20,36,58,.16)] md:p-7">
+          <div className="flex items-start justify-between gap-4">
             <div>
-              <CardTitle className="text-base">Fluxo Financeiro</CardTitle>
-              <p className="text-xs text-muted-foreground">Últimas movimentações</p>
+              <p className="text-sm text-white/70">Saldo disponível</p>
+              <div className="mt-2 flex items-center gap-3">
+                <h2 className="text-3xl font-bold tracking-tight md:text-4xl">{format(summary.balance)}</h2>
+                <button onClick={toggle} aria-label={hidden ? "Mostrar valores" : "Ocultar valores"} className="rounded-full p-2 text-white/75 transition hover:bg-white/10 hover:text-white">
+                  {hidden ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                </button>
+              </div>
             </div>
-            <Badge variant="outline">Recentes</Badge>
-          </CardHeader>
-          <CardContent className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Data</TableHead>
-                  <TableHead>Descrição</TableHead>
-                  <TableHead>Categoria</TableHead>
-                  <TableHead>Conta</TableHead>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead className="text-right">Valor</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {movements.slice(0, 8).map((m) => (
-                  <TableRow key={m.id} className="hover:bg-accent/30">
-                    <TableCell className="whitespace-nowrap text-muted-foreground">
-                      {parseLocalDate(m.date).toLocaleDateString("pt-BR")}
-                    </TableCell>
-                    <TableCell className="font-medium">{m.description}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="font-normal">
-                        {m.category}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">{m.account}</TableCell>
-                    <TableCell>
-                      <span
-                        className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-                          m.type === "receita"
-                            ? "bg-primary/15 text-primary"
-                            : "bg-destructive/15 text-destructive"
-                        }`}
-                      >
-                        {m.type === "receita" ? "Entrada" : "Saída"}
-                      </span>
-                    </TableCell>
-                    <TableCell
-                      className={`text-right font-semibold ${
-                        m.type === "receita" ? "text-primary" : "text-destructive"
-                      }`}
-                    >
-                      {m.type === "receita" ? "+" : "-"} {format(m.amount)}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      </main>
+            <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-white/10">
+              <Wallet className="h-5 w-5 text-white" />
+            </div>
+          </div>
+          <div className="mt-6 grid grid-cols-2 gap-4 border-t border-white/15 pt-4">
+            <div className="flex items-center gap-2">
+              <span className="grid h-8 w-8 place-items-center rounded-full bg-[#0D9B72]/20 text-[#6ee7bd]"><ArrowDownLeft className="h-4 w-4" /></span>
+              <div className="min-w-0"><p className="text-xs text-white/60">Entradas</p><p className="truncate text-sm font-semibold">{format(summary.income)}</p></div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="grid h-8 w-8 place-items-center rounded-full bg-[#E15B64]/20 text-[#ff9ca2]"><ArrowUpRight className="h-4 w-4" /></span>
+              <div className="min-w-0"><p className="text-xs text-white/60">Saídas</p><p className="truncate text-sm font-semibold">{format(summary.expenses)}</p></div>
+            </div>
+          </div>
+        </section>
 
+        <section className="grid grid-cols-2 gap-3 md:grid-cols-3">
+          <Card className="border-border/80 shadow-none"><CardContent className="p-4">
+            <p className="text-xs text-muted-foreground">Resultado do mês</p>
+            <p className={`mt-2 text-xl font-bold tracking-tight ${summary.savings >= 0 ? "text-[#0D9B72]" : "text-[#E15B64]"}`}>{format(summary.savings)}</p>
+            <p className="mt-1 text-[11px] text-muted-foreground">Entradas menos saídas</p>
+          </CardContent></Card>
+          <Card className="border-border/80 shadow-none"><CardContent className="p-4">
+            <p className="text-xs text-muted-foreground">Lançamentos</p>
+            <p className="mt-2 text-xl font-bold tracking-tight">{movements.length}</p>
+            <p className="mt-1 text-[11px] text-muted-foreground">Registros no total</p>
+          </CardContent></Card>
+          <Card className="col-span-2 border-border/80 shadow-none md:col-span-1"><CardContent className="p-4">
+            <p className="text-xs text-muted-foreground">Saúde financeira</p>
+            <p className="mt-2 text-xl font-bold tracking-tight">{summary.savings > 0 ? "No positivo" : summary.savings < 0 ? "Atenção aos gastos" : "Equilibrada"}</p>
+            <p className="mt-1 text-[11px] text-muted-foreground">{summary.savings > 0 ? "Você gastou menos do que recebeu." : summary.savings < 0 ? "As despesas superaram as receitas." : "Sem diferença entre entradas e saídas."}</p>
+          </CardContent></Card>
+        </section>
+
+        <section className="grid gap-4 lg:grid-cols-[1.2fr_.8fr]">
+          <Card className="border-border/80 shadow-none">
+            <CardContent className="p-5">
+              <div className="mb-4 flex items-center justify-between">
+                <div><h3 className="font-semibold">Onde você gastou</h3><p className="text-xs text-muted-foreground">Maiores despesas deste mês</p></div>
+                <Button variant="ghost" size="sm" className="text-primary" onClick={() => navigate({ to: "/relatorios" })}>Detalhes <ChevronRight className="ml-1 h-4 w-4" /></Button>
+              </div>
+              {summary.categories.length ? <div className="space-y-4">
+                {summary.categories.map(([category, amount]) => {
+                  const pct = summary.expenses > 0 ? Math.round(amount / summary.expenses * 100) : 0;
+                  return <div key={category} className="space-y-1.5">
+                    <div className="flex justify-between gap-3 text-sm"><span className="truncate font-medium">{category}</span><span className="shrink-0 text-muted-foreground">{format(amount)} <span className="text-xs">({pct}%)</span></span></div>
+                    <Progress value={pct} className="h-2 bg-secondary [&>div]:bg-[#356AE6]" />
+                  </div>;
+                })}
+              </div> : <p className="py-8 text-center text-sm text-muted-foreground">Suas despesas por categoria aparecerão aqui.</p>}
+            </CardContent>
+          </Card>
+
+          <Card className="border-border/80 shadow-none">
+            <CardContent className="p-5">
+              <div className="mb-4 flex items-center justify-between"><div><h3 className="font-semibold">Metas</h3><p className="text-xs text-muted-foreground">Acompanhe seus objetivos</p></div><Button variant="ghost" size="icon" onClick={() => navigate({ to: "/metas" })}><ChevronRight className="h-4 w-4" /></Button></div>
+              {goalPreview.length ? <div className="space-y-4">{goalPreview.map(goal => {
+                const current = Number(goal.current || 0), target = Number(goal.target || 0);
+                const pct = target > 0 ? Math.min(100, Math.round(current / target * 100)) : 0;
+                return <div key={goal.id} className="space-y-2">
+                  <div className="flex items-center gap-2"><Target className="h-4 w-4 text-primary" /><span className="min-w-0 flex-1 truncate text-sm font-medium">{goal.title}</span><span className="text-xs font-semibold text-primary">{pct}%</span></div>
+                  <Progress value={pct} className="h-2" />
+                  <p className="text-xs text-muted-foreground">{format(current)} de {format(target)}</p>
+                </div>;
+              })}</div> : <p className="py-8 text-center text-sm text-muted-foreground">Cadastre uma meta para acompanhar seu progresso.</p>}
+            </CardContent>
+          </Card>
+        </section>
+
+        {cardPreview.length > 0 && <section>
+          <div className="mb-3 flex items-center justify-between"><div><h3 className="font-semibold">Seus cartões</h3><p className="text-xs text-muted-foreground">Resumo das faturas atuais</p></div><Button variant="ghost" size="sm" onClick={() => navigate({ to: "/cartoes" })}>Ver todos <ChevronRight className="ml-1 h-4 w-4" /></Button></div>
+          <div className="grid gap-3 sm:grid-cols-2">{cardPreview.map(card => <button key={card.id} onClick={() => navigate({ to: "/cartoes" })} className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 text-left transition hover:border-primary/40">
+            <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#356AE6]/10 text-[#356AE6]"><CreditCard className="h-5 w-5" /></span>
+            <span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold">{card.name}</span><span className="block text-xs text-muted-foreground">Vencimento dia {card.due_day}</span></span>
+            <span className="text-right"><span className="block text-xs text-muted-foreground">Fatura atual</span><span className="font-semibold">{format(card.total)}</span></span>
+          </button>)}</div>
+        </section>}
+
+        <section>
+          <div className="mb-3 flex items-center justify-between"><div><h3 className="font-semibold">Últimas movimentações</h3><p className="text-xs text-muted-foreground">Atividade recente da sua conta</p></div><Button variant="ghost" size="sm" onClick={() => navigate({ to: "/movimentacoes" })}>Ver todas <ChevronRight className="ml-1 h-4 w-4" /></Button></div>
+          <Card className="border-border/80 shadow-none"><CardContent className="divide-y divide-border p-0">
+            {summary.recent.length ? summary.recent.map(item => <div key={item.id} className="flex items-center gap-3 px-4 py-3.5">
+              <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-full ${item.type === "receita" ? "bg-[#0D9B72]/10 text-[#0D9B72]" : "bg-[#E15B64]/10 text-[#E15B64]"}`}>{item.type === "receita" ? <ArrowDownLeft className="h-4 w-4" /> : <ArrowUpRight className="h-4 w-4" />}</span>
+              <span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium">{item.description}</span><span className="block truncate text-xs text-muted-foreground">{item.category} · {parseLocalDate(item.date).toLocaleDateString("pt-BR")}</span></span>
+              <span className={`shrink-0 text-sm font-semibold ${item.type === "receita" ? "text-[#0D9B72]" : "text-foreground"}`}>{item.type === "receita" ? "+" : "−"}{format(Number(item.amount))}</span>
+            </div>) : <p className="p-8 text-center text-sm text-muted-foreground">Nenhuma movimentação cadastrada ainda.</p>}
+          </CardContent></Card>
+        </section>
+
+        <Button onClick={() => navigate({ to: "/movimentacoes" })} className="hidden rounded-full md:inline-flex"><Plus className="mr-2 h-4 w-4" /> Nova movimentação</Button>
+      </main>
       <NewMovementFab />
     </div>
   );
