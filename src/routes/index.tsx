@@ -8,7 +8,7 @@ import { parseLocalDate, getCurrentInvoiceMonthKey } from "@/lib/credit-cards";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Eye, EyeOff, ArrowDownLeft, ArrowUpRight, Wallet, CreditCard, Target, ChevronRight, Plus, CalendarDays } from "lucide-react";
+import { Eye, EyeOff, ArrowDownLeft, ArrowUpRight, Wallet, CreditCard, Target, ChevronRight, Plus, CalendarDays, AlertTriangle, CheckCircle2, Activity } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({ meta: [
@@ -123,11 +123,43 @@ function DashboardPage() {
             <p className="mt-2 text-xl font-bold tracking-tight">{movements.length}</p>
             <p className="mt-1 text-[11px] text-muted-foreground">Registros no total</p>
           </CardContent></Card>
-          <Card className="col-span-2 border-border/80 shadow-none md:col-span-1"><CardContent className="p-4">
-            <p className="text-xs text-muted-foreground">Saúde financeira</p>
-            <p className="mt-2 text-xl font-bold tracking-tight">{summary.savings > 0 ? "No positivo" : summary.savings < 0 ? "Atenção aos gastos" : "Equilibrada"}</p>
-            <p className="mt-1 text-[11px] text-muted-foreground">{summary.savings > 0 ? "Você gastou menos do que recebeu." : summary.savings < 0 ? "As despesas superaram as receitas." : "Sem diferença entre entradas e saídas."}</p>
-          </CardContent></Card>
+          <Card className="col-span-2 overflow-hidden border-border/80 shadow-none md:col-span-1">
+            {(() => {
+              const hasData = summary.income > 0 || summary.expenses > 0;
+              const ratio = summary.income > 0 ? (summary.expenses / summary.income) * 100 : summary.expenses > 0 ? 101 : 0;
+              const status = !hasData ? "empty" : ratio <= 60 ? "good" : ratio <= 100 ? "medium" : "bad";
+              const styles = {
+                good: { shell: "border-emerald-500/30 bg-emerald-500/[0.07]", icon: "bg-emerald-500/15 text-emerald-500", title: "text-emerald-500", bar: "bg-emerald-500", badge: "bg-emerald-500/15 text-emerald-500", label: "Boa", description: "Seus gastos estão dentro de uma faixa confortável." },
+                medium: { shell: "border-amber-500/30 bg-amber-500/[0.07]", icon: "bg-amber-500/15 text-amber-500", title: "text-amber-500", bar: "bg-amber-500", badge: "bg-amber-500/15 text-amber-500", label: "Atenção", description: "Uma boa parte da sua renda já está comprometida." },
+                bad: { shell: "border-rose-500/35 bg-rose-500/[0.08]", icon: "bg-rose-500/15 text-rose-500", title: "text-rose-500", bar: "bg-rose-500", badge: "bg-rose-500/15 text-rose-500", label: "Crítica", description: "Suas despesas superaram suas receitas." },
+                empty: { shell: "border-border bg-muted/30", icon: "bg-muted text-muted-foreground", title: "text-foreground", bar: "bg-muted-foreground", badge: "bg-muted text-muted-foreground", label: "Sem dados", description: "Cadastre receitas e despesas para acompanhar sua saúde financeira." },
+              }[status];
+              const StatusIcon = status === "good" ? CheckCircle2 : status === "medium" ? Activity : status === "bad" ? AlertTriangle : Activity;
+              return <CardContent className={`space-y-3 border p-4 ${styles.shell}`}>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs font-semibold text-muted-foreground">Saúde financeira</p>
+                  <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${styles.badge}`}>{styles.label}</span>
+                </div>
+                <div className="flex items-center gap-2.5">
+                  <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl ${styles.icon}`}><StatusIcon className="h-5 w-5" /></span>
+                  <div className="min-w-0">
+                    <p className={`text-base font-bold tracking-tight ${styles.title}`}>{status === "good" ? "No caminho certo" : status === "medium" ? "Atenção aos gastos" : status === "bad" ? "Gastos acima da renda" : "Vamos começar?"}</p>
+                    <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">{styles.description}</p>
+                  </div>
+                </div>
+                {hasData && <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="text-muted-foreground">Renda comprometida</span>
+                    <span className={`font-bold tabular-nums ${styles.title}`}>{Math.round(ratio)}%</span>
+                  </div>
+                  <div className="h-2 overflow-hidden rounded-full bg-muted">
+                    <div className={`h-full rounded-full transition-all duration-500 ${styles.bar}`} style={{ width: `${Math.min(ratio, 100)}%` }} />
+                  </div>
+                  <p className="text-[10px] text-muted-foreground">{status === "bad" ? `Você gastou ${(ratio - 100).toFixed(1).replace(".", ",")}% a mais do que recebeu.` : status === "medium" ? "Tente reduzir despesas para liberar mais da sua renda." : "Até 60% da renda comprometida: boa margem para seus objetivos."}</p>
+                </div>}
+              </CardContent>;
+            })()}
+          </Card>
         </section>
 
         <section className="grid gap-4 lg:grid-cols-[1.2fr_.8fr]">
