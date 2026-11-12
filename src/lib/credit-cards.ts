@@ -10,38 +10,65 @@ export interface CreditCardInvoiceInfo {
 
 const monthNames = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
+type CardBillingDays = Pick<CreditCard, "closing_day" | "due_day">;
+
+function monthKeyFromDate(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function addMonths(date: Date, amount: number): Date {
+  return new Date(date.getFullYear(), date.getMonth() + amount, 1);
+}
+
+function getSafeDay(year: number, monthIndex: number, requestedDay: number): number {
+  const lastDay = new Date(year, monthIndex + 1, 0).getDate();
+  return Math.min(Math.max(1, requestedDay), lastDay);
+}
+
+function getDueDateForInvoice(invoiceDate: Date, card: CardBillingDays): Date {
+  const closingDay = Number(card.closing_day || 1);
+  const dueDay = Number(card.due_day || 10);
+  // When the due day falls on/before the closing day, payment is in the following month.
+  const dueMonth = dueDay <= closingDay ? addMonths(invoiceDate, 1) : invoiceDate;
+  return new Date(
+    dueMonth.getFullYear(),
+    dueMonth.getMonth(),
+    getSafeDay(dueMonth.getFullYear(), dueMonth.getMonth(), dueDay),
+  );
+}
+
 export function parseLocalDate(dateStr: string | Date): Date {
-  if (dateStr instanceof Date) return dateStr;
+  if (dateStr instanceof Date) {
+    return new Date(dateStr.getFullYear(), dateStr.getMonth(), dateStr.getDate());
+  }
   const [year, month, day] = dateStr.split("T")[0].split("-").map(Number);
   return new Date(year, month - 1, day);
 }
 
+/** Returns the statement cycle month for a purchase, not simply its calendar month. */
 export function getCreditCardInvoiceInfo(
   dateInput: string | Date,
-  card?: Pick<CreditCard, "closing_day" | "due_day"> | null,
+  card?: CardBillingDays | null,
 ): CreditCardInvoiceInfo | null {
   if (!card) return null;
 
-  const date = parseLocalDate(dateInput);
-  const dueDay = Number(card.due_day || 10);
-
-  const currentMonth = date.getMonth();
-  const currentYear = date.getFullYear();
-
-  const invoiceDate = new Date(currentYear, currentMonth, 1);
-
-  const dueDate = new Date(invoiceDate.getFullYear(), invoiceDate.getMonth(), dueDay);
+  const purchaseDate = parseLocalDate(dateInput);
+  const closingDay = Number(card.closing_day || 1);
+  const purchaseMonth = new Date(purchaseDate.getFullYear(), purchaseDate.getMonth(), 1);
+  const invoiceDate = purchaseDate.getDate() > closingDay ? addMonths(purchaseMonth, 1) : purchaseMonth;
+  const dueDate = getDueDateForInvoice(invoiceDate, card);
+  const currentInvoiceMonth = getCurrentInvoiceMonthKey(card);
 
   return {
-    monthKey: `${invoiceDate.getFullYear()}-${String(invoiceDate.getMonth() + 1).padStart(2, "0")}`,
+    monthKey: monthKeyFromDate(invoiceDate),
     label: `${monthNames[invoiceDate.getMonth()]} ${invoiceDate.getFullYear()}`,
     dueDate: dueDate.toLocaleDateString("pt-BR"),
-    dueMonthKey: `${dueDate.getFullYear()}-${String(dueDate.getMonth() + 1).padStart(2, "0")}`,
-    isCurrent: invoiceDate.getMonth() === new Date().getMonth() && invoiceDate.getFullYear() === new Date().getFullYear(),
+    dueMonthKey: monthKeyFromDate(dueDate),
+    isCurrent: monthKeyFromDate(invoiceDate) === currentInvoiceMonth,
   };
 }
 
-export function getInvoiceLabelForCard(dateInput: string | Date, card?: Pick<CreditCard, "closing_day" | "due_day"> | null) {
+export function getInvoiceLabelForCard(dateInput: string | Date, card?: CardBillingDays | null) {
   const info = getCreditCardInvoiceInfo(dateInput, card);
   if (!info) return null;
   return `${info.label} · vence ${info.dueDate}`;
@@ -49,61 +76,39 @@ export function getInvoiceLabelForCard(dateInput: string | Date, card?: Pick<Cre
 
 export function getCurrentInvoiceMonthKey(card: Pick<CreditCard, "closing_day">): string {
   const now = new Date();
-  const month = now.getMonth();
-  const year = now.getFullYear();
-  return `${year}-${String(month + 1).padStart(2, "0")}`;
+  const currentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const invoiceDate = now.getDate() > Number(card.closing_day || 1) ? addMonths(currentMonth, 1) : currentMonth;
+  return monthKeyFromDate(invoiceDate);
 }
 
 export function getNextInvoiceMonthKey(card: Pick<CreditCard, "closing_day">): string {
-  const [yStr, mStr] = getCurrentInvoiceMonthKey(card).split("-");
-  let y = parseInt(yStr);
-  let m = parseInt(mStr);
-  m += 1;
-  if (m > 12) { m = 1; y += 1; }
-  return `${y}-${String(m).padStart(2, "0")}`;
+  const [year, month] = getCurrentInvoiceMonthKey(card).split("-").map(Number);
+  return monthKeyFromDate(new Date(year, month, 1));
 }
 
 export function getInvoiceMonthLabel(monthKey: string): string {
-  const [yStr, mStr] = monthKey.split("-");
-  const y = parseInt(yStr);
-  const m = parseInt(mStr);
-  return `${monthNames[m - 1]} ${y}`;
+  const [year, month] = monthKey.split("-").map(Number);
+  return `${monthNames[month - 1]} ${year}`;
 }
 
 export function getInstallmentInvoiceInfos(
   dateInput: string | Date,
-  card: Pick<CreditCard, "closing_day" | "due_day">,
+  card: CardBillingDays,
   totalInstallments: number,
 ): CreditCardInvoiceInfo[] {
   const baseInfo = getCreditCardInvoiceInfo(dateInput, card);
-  if (!baseInfo) return [];
+  if (!baseInfo || !Number.isInteger(totalInstallments) || totalInstallments < 1) return [];
 
-  const [yearStr, monthStr] = baseInfo.monthKey.split("-");
-  let baseYear = parseInt(yearStr);
-  let baseMonth = parseInt(monthStr) - 1;
-
-  const result: CreditCardInvoiceInfo[] = [];
-
-  for (let i = 0; i < totalInstallments; i++) {
-    const totalM = baseMonth + i;
-    const targetYear = baseYear + Math.floor(totalM / 12);
-    const targetMonth = (totalM % 12) + 1;
-
-    const monthKey = `${targetYear}-${String(targetMonth).padStart(2, "0")}`;
-
-    const dueDay = Number(card.due_day || 10);
-    const dueDate = new Date(targetYear, targetMonth - 1, dueDay);
-
-    result.push({
-      monthKey,
-      label: `${monthNames[targetMonth - 1]} ${targetYear}`,
+  const [year, month] = baseInfo.monthKey.split("-").map(Number);
+  return Array.from({ length: totalInstallments }, (_, index) => {
+    const invoiceDate = new Date(year, month - 1 + index, 1);
+    const dueDate = getDueDateForInvoice(invoiceDate, card);
+    return {
+      monthKey: monthKeyFromDate(invoiceDate),
+      label: `${monthNames[invoiceDate.getMonth()]} ${invoiceDate.getFullYear()}`,
       dueDate: dueDate.toLocaleDateString("pt-BR"),
-      dueMonthKey: `${dueDate.getFullYear()}-${String(dueDate.getMonth() + 1).padStart(2, "0")}`,
-      isCurrent:
-        targetMonth - 1 === new Date().getMonth() &&
-        targetYear === new Date().getFullYear(),
-    });
-  }
-
-  return result;
+      dueMonthKey: monthKeyFromDate(dueDate),
+      isCurrent: monthKeyFromDate(invoiceDate) === getCurrentInvoiceMonthKey(card),
+    };
+  });
 }
