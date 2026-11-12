@@ -133,7 +133,7 @@ function RootShell({ children }: { children: ReactNode }) {
             __html: `
               (function() {
                 try {
-                  var theme = localStorage.getItem("dash-theme") || "dark";
+                  var theme = localStorage.getItem("dash-theme") || "light";
                   document.documentElement.classList.add(theme);
                 } catch(e) {}
               })();
