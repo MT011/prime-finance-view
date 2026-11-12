@@ -196,7 +196,7 @@ function RootComponent() {
           <SidebarProvider>
             <div className="flex min-h-screen w-full bg-background">
               <AppSidebar />
-              <SidebarInset className="min-w-0 flex-1 bg-background">
+              <SidebarInset className="min-w-0 flex-1 bg-background pb-20 md:pb-0">
                 <Outlet />
               </SidebarInset>
             </div>
