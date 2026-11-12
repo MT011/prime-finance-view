@@ -1,4 +1,5 @@
 import { Bell } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -38,9 +39,11 @@ export function AppHeader({ greeting = false, title, subtitle }: Props) {
         </div>
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="icon" className="rounded-full text-muted-foreground" aria-label="Notificações"><Bell className="h-5 w-5" /></Button>
-          <Avatar className="h-9 w-9 border border-border">
-            <AvatarFallback className="bg-[#e8eefb] font-semibold text-[#14243a]">{initial}</AvatarFallback>
-          </Avatar>
+          <Link to="/perfil" aria-label="Abrir meu perfil" className="rounded-full outline-none transition-shadow hover:ring-2 hover:ring-primary focus-visible:ring-2 focus-visible:ring-primary">
+            <Avatar className="h-9 w-9 border border-border">
+              <AvatarFallback className="bg-[#e8eefb] font-semibold text-[#14243a]">{initial}</AvatarFallback>
+            </Avatar>
+          </Link>
         </div>
       </div>
     </header>
