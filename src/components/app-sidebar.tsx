@@ -76,7 +76,7 @@ export function AppSidebar() {
             <span className="truncate text-sm font-semibold text-sidebar-foreground">
               Finance
             </span>
-            <span className="truncate text-xs text-muted-foreground">Dashboard</span>
+            <span className="truncate text-xs text-muted-foreground">Finanças pessoais</span>
           </div>
         </div>
       </SidebarHeader>
