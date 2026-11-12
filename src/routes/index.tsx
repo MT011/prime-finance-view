@@ -18,8 +18,6 @@ export const Route = createFileRoute("/")({
   component: DashboardPage,
 });
 
-const money = (value: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
-
 function DashboardPage() {
   const { hidden, toggle, format } = useValueVisibility();
   const navigate = useNavigate();
