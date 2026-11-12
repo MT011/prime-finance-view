@@ -10,7 +10,7 @@ import {
   User,
   Wallet,
   LogOut,
-  MoreHorizontal,
+
 } from "lucide-react";
 import {
   Sidebar,
@@ -141,7 +141,7 @@ export function AppSidebar() {
         { title: "Lançamentos", url: "/movimentacoes", icon: ArrowLeftRight },
         { title: "Cartões", url: "/cartoes", icon: CreditCard },
         { title: "Metas", url: "/metas", icon: Target },
-        { title: "Mais", url: "/relatorios", icon: MoreHorizontal },
+        { title: "Config.", url: "/configuracoes", icon: Settings },
       ].map((item) => {
         const active = item.url === "/" ? pathname === "/" : pathname === item.url || pathname.startsWith(item.url + "/");
         return (
