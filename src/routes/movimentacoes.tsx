@@ -544,7 +544,7 @@ function MovimentacoesPage() {
   return (
     <div className="flex min-h-screen flex-col">
       <AppHeader title="Movimentações" subtitle="Todas as entradas e saídas" />
-      <main className="flex-1 space-y-6 p-4 md:p-8">
+      <main className="app-page flex-1 space-y-6">
         {selectedCard ? (
           <>
             {/* Card Detail Header */}
