@@ -4,9 +4,9 @@ type Theme = "dark" | "light";
 interface ThemeContextType { theme: Theme; setTheme: (theme: Theme) => void; }
 const STORAGE_KEY = "dash-theme";
 function getStoredTheme(): Theme {
-  if (typeof window === "undefined") return "light";
+  if (typeof window === "undefined") return "dark";
   const stored = localStorage.getItem(STORAGE_KEY);
-  return stored === "dark" || stored === "light" ? stored : "light";
+  return stored === "dark" || stored === "light" ? stored : "dark";
 }
 function applyTheme(theme: Theme) {
   const root = document.documentElement;
