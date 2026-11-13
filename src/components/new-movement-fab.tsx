@@ -279,7 +279,7 @@ export function NewMovementFab() {
               inputMode="numeric"
               placeholder="0,00"
               value={formatAmountInput(amount)}
-              onChange={(e) => setAmount(e.target.value.replace(/\\D/g, ""))}
+              onChange={(e) => setAmount(e.target.value.replace(/\D/g, ""))}
               disabled={saving}
             />
           </div>
