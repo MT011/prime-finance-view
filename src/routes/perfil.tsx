@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/lib/supabase";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/perfil")({
   head: () => ({
@@ -22,6 +24,21 @@ export const Route = createFileRoute("/perfil")({
 function PerfilPage() {
   const [user, setUser] = useState<any>(null);
   const [userId, setUserId] = useState<string>("");
+  const [signingOut, setSigningOut] = useState(false);
+
+  const handleSignOut = async () => {
+    if (signingOut) return;
+    setSigningOut(true);
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      // Garante que a navegação reinicie na tela de login após sair da conta.
+      window.location.replace("/");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível sair. Tente novamente.");
+      setSigningOut(false);
+    }
+  };
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -109,8 +126,9 @@ function PerfilPage() {
                 <Button variant="outline" className="gap-2">
                   <Camera className="h-4 w-4" /> Alterar Foto
                 </Button>
-                <Button variant="ghost" className="gap-2 text-destructive hover:text-destructive">
-                  <LogOut className="h-4 w-4" /> Sair
+                <Button type="button" variant="ghost" onClick={handleSignOut} disabled={signingOut} className="gap-2 text-destructive hover:text-destructive" aria-label="Sair da conta">
+                  {signingOut ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogOut className="h-4 w-4" />}
+                  {signingOut ? "Saindo..." : "Sair"}
                 </Button>
               </div>
             </div>
