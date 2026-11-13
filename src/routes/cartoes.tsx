@@ -200,7 +200,7 @@ function CartoesPage() {
   return (
     <div className="flex min-h-screen flex-col">
       <AppHeader title="Cartões" subtitle="Controle de crédito e faturas" />
-      <main className="flex-1 space-y-6 p-4 md:p-8">
+      <main className="app-page flex-1 space-y-6">
         <Card className="glass-card">
           <CardHeader>
             <CardTitle className="text-base">Adicionar cartão</CardTitle>
