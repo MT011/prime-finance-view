@@ -199,48 +199,29 @@ body::before {
   position: relative;
   isolation: isolate;
   overflow: hidden;
-  border: 1px solid rgba(123, 177, 255, .26);
+  border: 1px solid rgba(128, 220, 199, .16);
   background:
-    radial-gradient(ellipse 22rem 15rem at 88% 0%, rgba(38, 137, 255, .42), transparent 72%),
-    radial-gradient(ellipse 20rem 14rem at 12% 110%, rgba(35, 83, 224, .32), transparent 72%),
-    linear-gradient(118deg, #0b1b31 0%, #102d50 52%, #0b1b34 100%);
-  box-shadow: 0 18px 48px rgba(15, 66, 145, .20), 0 0 38px -18px rgba(65, 151, 255, .72), inset 0 1px 0 rgba(255,255,255,.12);
+    radial-gradient(ellipse 70% 105% at 78% 2%, rgba(20, 143, 125, .38), transparent 76%),
+    radial-gradient(ellipse 68% 85% at 8% 110%, rgba(13, 90, 83, .24), transparent 75%),
+    linear-gradient(135deg, #071311 0%, #071c1b 48%, #04100f 100%);
+  box-shadow: 0 18px 45px rgba(1, 16, 16, .22), inset 0 1px 0 rgba(255,255,255,.07);
 }
 .blue-glow-hero::before {
   content: "";
   position: absolute;
-  width: 18rem;
-  height: 18rem;
-  right: -5rem;
-  top: -9rem;
+  inset: 0;
   z-index: -1;
-  border: 1px solid rgba(153, 202, 255, .22);
-  border-radius: 50%;
-  box-shadow: 0 0 0 24px rgba(113, 177, 255, .035), 0 0 0 54px rgba(113, 177, 255, .025), 0 0 75px rgba(57, 145, 255, .24);
+  pointer-events: none;
+  background: linear-gradient(125deg, rgba(255,255,255,.035), transparent 38%);
 }
-.blue-glow-hero::after {
-  content: "";
-  position: absolute;
-  width: 8px;
-  height: 8px;
-  top: 27%;
-  right: 27%;
-  border-radius: 50%;
-  background: #a9d8ff;
-  box-shadow: 0 0 10px 3px rgba(93, 174, 255, .9), 0 0 34px 8px rgba(46, 131, 255, .45);
-}
+.blue-glow-hero::after { content: none; }
 .blue-glow-hero > * { position: relative; z-index: 1; }
 .dark .blue-glow-hero {
-  box-shadow: 0 20px 54px rgba(0, 7, 20, .34), 0 0 48px -18px rgba(65, 151, 255, .8), inset 0 1px 0 rgba(255,255,255,.14);
+  box-shadow: 0 24px 60px rgba(0, 7, 12, .38), inset 0 1px 0 rgba(255,255,255,.07);
 }
 @media (prefers-reduced-motion: no-preference) {
-  .blue-glow-hero::after { animation: blue-pulse 3.8s ease-in-out infinite; }
   .dark [data-slot="card"] { transition: border-color .22s ease, box-shadow .22s ease, transform .22s ease; }
   .dark [data-slot="card"]:hover { transform: translateY(-2px); }
-}
-@keyframes blue-pulse {
-  0%, 100% { opacity: .72; transform: scale(.86); }
-  50% { opacity: 1; transform: scale(1.18); }
 }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
