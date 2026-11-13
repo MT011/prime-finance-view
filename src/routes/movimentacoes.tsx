@@ -58,6 +58,7 @@ import {
   useBulkDeleteMovements,
 } from "@/hooks/queries";
 import { toast } from "sonner";
+import { formatCurrencyInput, formatCurrencyValue, parseCurrencyInput } from "@/lib/currency-input";
 import {
   getCreditCardInvoiceInfo,
   getCurrentInvoiceMonthKey,
@@ -333,7 +334,7 @@ function MovimentacoesPage() {
   const handleEditRequest = (movement: any) => {
     setMovementToEdit(movement);
     setEditType(movement.type);
-    setEditAmount(String(movement.amount));
+    setEditAmount(formatCurrencyValue(movement.amount));
     setEditCategory(movement.category);
     setEditAccount(movement.account);
     setEditDate(movement.date.split("T")[0]);
@@ -346,7 +347,7 @@ function MovimentacoesPage() {
   };
 
   const handleEditSave = async () => {
-    const numAmount = parseFloat(editAmount.replace(",", "."));
+    const numAmount = parseCurrencyInput(editAmount);
     if (isNaN(numAmount) || numAmount <= 0) {
       toast.error("Por favor, digite um valor válido maior que zero.");
       return;
@@ -1217,9 +1218,9 @@ function MovimentacoesPage() {
                 <Label>Valor</Label>
                 <Input
                   placeholder="R$ 0,00"
-                  inputMode="decimal"
+                  inputMode="numeric"
                   value={editAmount}
-                  onChange={(e) => setEditAmount(e.target.value)}
+                  onChange={(e) => setEditAmount(formatCurrencyInput(e.target.value))}
                   disabled={editSaving || (editMode === "all" && !!movementToEdit?.installment_group_id && !movementToEdit?.recurring_group_id)}
                 />
               </div>
