@@ -138,7 +138,7 @@ export function AppSidebar() {
         </div>
       </SidebarFooter>
     </Sidebar>
-    <nav aria-label="Navegação principal" className="fixed inset-x-0 bottom-0 z-50 grid grid-cols-5 border-t border-border/80 bg-background/95 px-1 pb-[max(env(safe-area-inset-bottom),8px)] pt-2 shadow-[0_-8px_30px_rgba(0,0,0,0.22)] backdrop-blur-xl md:hidden">
+    <nav aria-label="Navegação principal" className="fixed inset-x-0 bottom-0 z-50 grid grid-cols-5 border-t border-border/80 bg-background/80 px-1 pb-[max(env(safe-area-inset-bottom),8px)] pt-2 shadow-[0_-8px_30px_rgba(0,0,0,0.22)] backdrop-blur-xl md:hidden">
       {[
         { title: "Início", url: "/", icon: LayoutDashboard },
         { title: "Lançamentos", url: "/movimentacoes", icon: ArrowLeftRight },
