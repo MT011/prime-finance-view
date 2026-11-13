@@ -38,7 +38,7 @@ import {
 export const Route = createFileRoute("/categorias")({
   head: () => ({
     meta: [
-      { title: "Categorias — Finance Dashboard" },
+      { title: "Categorias — Prime Finance" },
       { name: "description", content: "Gerencie suas categorias de receitas e despesas." },
     ],
   }),
