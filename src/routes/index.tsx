@@ -85,29 +85,29 @@ function DashboardPage() {
           </Button>
         </section>
 
-        <section className="blue-glow-hero rounded-3xl p-5 text-white md:p-7">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="text-sm text-white/70">Saldo disponível</p>
-              <div className="mt-2 flex items-center gap-3">
-                <h2 className="text-3xl font-bold tracking-tight md:text-4xl">{format(summary.balance)}</h2>
-                <button onClick={toggle} aria-label={hidden ? "Mostrar valores" : "Ocultar valores"} className="rounded-full p-2 text-white/75 transition hover:bg-white/10 hover:text-white">
-                  {hidden ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                </button>
-              </div>
-            </div>
-            <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-white/10">
-              <Wallet className="h-5 w-5 text-white" />
-            </div>
+        <section className="blue-glow-hero rounded-[28px] px-5 py-7 text-white sm:px-8 sm:py-9">
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-[11px] font-semibold uppercase tracking-[.18em] text-emerald-100/60">Prime Finance</span>
+            <span className="rounded-full border border-white/10 bg-white/[0.06] px-3 py-1 text-[11px] font-medium text-emerald-100/75">Visão financeira</span>
           </div>
-          <div className="mt-6 grid grid-cols-2 gap-4 border-t border-white/15 pt-4">
-            <div className="flex items-center gap-2">
-              <span className="grid h-8 w-8 place-items-center rounded-full bg-[#0D9B72]/20 text-[#6ee7bd]"><ArrowDownLeft className="h-4 w-4" /></span>
-              <div className="min-w-0"><p className="text-xs text-white/60">Entradas</p><p className="truncate text-sm font-semibold">{format(summary.income)}</p></div>
+          <div className="flex flex-col items-center pb-7 pt-9 text-center sm:pb-9 sm:pt-11">
+            <p className="text-sm font-medium text-emerald-50/65">Saldo disponível</p>
+            <div className="mt-3 flex max-w-full items-center justify-center gap-2">
+              <h2 className="min-w-0 break-all text-[clamp(2rem,7vw,3.75rem)] font-semibold tracking-[-.055em] leading-tight tabular-nums text-white">{format(summary.balance)}</h2>
+              <button onClick={toggle} aria-label={hidden ? "Mostrar valores" : "Ocultar valores"} className="shrink-0 rounded-full p-2 text-emerald-50/60 transition-colors hover:bg-white/10 hover:text-white">
+                {hidden ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+              </button>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="grid h-8 w-8 place-items-center rounded-full bg-[#E15B64]/20 text-[#ff9ca2]"><ArrowUpRight className="h-4 w-4" /></span>
-              <div className="min-w-0"><p className="text-xs text-white/60">Saídas</p><p className="truncate text-sm font-semibold">{format(summary.expenses)}</p></div>
+            <p className="mt-3 text-xs text-emerald-50/50">Seu dinheiro em perspectiva</p>
+          </div>
+          <div className="grid grid-cols-2 gap-3 border-t border-white/10 pt-5 sm:gap-6">
+            <div className="flex min-w-0 items-center gap-3 rounded-2xl bg-white/[0.045] p-3 sm:p-4">
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-emerald-300/10 text-emerald-200"><ArrowDownLeft className="h-4 w-4" /></span>
+              <div className="min-w-0"><p className="text-xs text-emerald-50/55">Entradas do mês</p><p className="truncate text-sm font-semibold tabular-nums sm:text-base">{format(summary.income)}</p></div>
+            </div>
+            <div className="flex min-w-0 items-center gap-3 rounded-2xl bg-white/[0.045] p-3 sm:p-4">
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-rose-300/10 text-rose-200"><ArrowUpRight className="h-4 w-4" /></span>
+              <div className="min-w-0"><p className="text-xs text-emerald-50/55">Saídas do mês</p><p className="truncate text-sm font-semibold tabular-nums sm:text-base">{format(summary.expenses)}</p></div>
             </div>
           </div>
         </section>
