@@ -38,7 +38,7 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/cartoes")({
   head: () => ({
     meta: [
-      { title: "Cartões — Finance Dashboard" },
+      { title: "Cartões — Prime Finance" },
       { name: "description", content: "Gerencie seus cartões de crédito e suas faturas." },
     ],
   }),
