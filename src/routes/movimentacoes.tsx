@@ -602,7 +602,7 @@ function MovimentacoesPage() {
             <Card className="glass-card overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent pointer-events-none" />
               <CardContent className="relative pt-6">
-                <div className="mb-4 flex items-center justify-between">
+                <div className="mb-4 flex min-w-0 flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <Button
                     variant="ghost"
                     size="sm"
@@ -612,12 +612,12 @@ function MovimentacoesPage() {
                         search: { card: undefined, tab: undefined },
                       })
                     }
-                    className="gap-1.5 text-muted-foreground"
+                    className="w-fit max-w-full gap-1.5 text-muted-foreground"
                   >
-                    <ArrowLeft className="h-4 w-4" /> Todas as movimentações
+                    <ArrowLeft className="h-4 w-4 shrink-0" /> Todas as movimentações
                   </Button>
-                  <div className="flex items-center gap-2">
-                    <CreditCard className="h-4 w-4 text-primary" />
+                  <div className="flex min-w-0 w-full items-center gap-2 sm:w-auto">
+                    <CreditCard className="h-4 w-4 shrink-0 text-primary" />
                     <Select
                       value={selectedCardId}
                       onValueChange={(v) =>
@@ -630,7 +630,7 @@ function MovimentacoesPage() {
                         })
                       }
                     >
-                      <SelectTrigger className="w-44">
+                      <SelectTrigger aria-label="Selecionar cartão" className="min-w-0 w-full flex-1 sm:w-44 sm:flex-none">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
