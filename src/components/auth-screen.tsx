@@ -1,18 +1,10 @@
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Sparkles, Loader2 } from "lucide-react";
+import { ArrowUpRight, Loader2, ShieldCheck, Sparkle } from "lucide-react";
 
 export function AuthScreen() {
   const [loading, setLoading] = useState(false);
@@ -40,36 +32,39 @@ export function AuthScreen() {
   };
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-primary/10 via-background to-background px-4 py-12">
-      <div className="absolute top-1/4 left-1/4 -z-10 h-72 w-72 rounded-full bg-primary/10 blur-3xl" />
-      <div className="absolute bottom-1/4 right-1/4 -z-10 h-72 w-72 rounded-full bg-info/10 blur-3xl" />
+    <main className="flex min-h-screen items-center justify-center bg-background p-4 sm:p-6">
+      <div className="grid w-full max-w-[1150px] overflow-hidden rounded-[30px] border border-border bg-card shadow-[0_28px_100px_rgba(0,0,0,.12)] lg:min-h-[650px] lg:grid-cols-[1.08fr_.92fr]">
+        <section className="relative hidden flex-col justify-between overflow-hidden bg-[#ece5d9] p-12 text-[#22201e] lg:flex">
+          <div className="relative z-10 flex items-center gap-3">
+            <span className="grid h-10 w-10 place-items-center rounded-2xl bg-[#252321] text-[#fffaf3]"><span className="display-font text-2xl font-black">f<span className="text-[#ff977b]">.</span></span></span>
+            <span className="display-font text-xl font-extrabold tracking-tight">prime<span className="font-medium opacity-60">finance</span></span>
+          </div>
+          <div className="relative z-10">
+            <p className="text-[11px] font-bold uppercase tracking-[.20em] text-[#8b695d]">SUA NOVA PERSPECTIVA</p>
+            <h1 className="display-font mt-6 max-w-md text-[clamp(3.25rem,5vw,5.3rem)] font-extrabold leading-[.97] tracking-[-.07em]">
+              Mais clareza. <span className="text-[#c34d35]">Menos ruído.</span>
+            </h1>
+            <p className="mt-6 max-w-sm text-base leading-relaxed text-[#69615a]">Organize seu dinheiro, acompanhe seus planos e viva com mais tranquilidade.</p>
+          </div>
+          <div className="relative z-10 flex items-center gap-2 text-xs font-semibold text-[#68615a]">
+            <ShieldCheck className="h-4 w-4" /> Seu espaço para cuidar das finanças
+          </div>
+          <div aria-hidden="true" className="pointer-events-none absolute -right-44 top-8 h-[440px] w-[440px] rounded-full border border-[#c7baaa] shadow-[0_0_0_78px_rgba(255,255,255,.18),0_0_0_160px_rgba(255,255,255,.1)]" />
+          <div aria-hidden="true" className="pointer-events-none absolute -bottom-28 right-2 h-64 w-64 rounded-full bg-[#d8a998] opacity-45 blur-[50px]" />
+        </section>
 
-      <div className="w-full max-w-md space-y-6">
-        <div className="flex flex-col items-center text-center space-y-2">
-          <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-foreground via-foreground/90 to-muted-foreground bg-clip-text text-transparent">
-            Finance
-          </h1>
-          <p className="text-sm text-muted-foreground max-w-[280px]">
-            Finanças pessoais
-          </p>
-        </div>
-
-        <Card className="glass-card border-border/40 shadow-2xl relative overflow-hidden backdrop-blur-md">
-          <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
-
-          <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl font-bold text-center">
-              Bem-vindo de volta
-            </CardTitle>
-            <CardDescription className="text-center text-xs">
-              Entre com suas credenciais para gerenciar suas finanças
-            </CardDescription>
-          </CardHeader>
-
-          <form onSubmit={handleSubmit}>
-            <CardContent className="space-y-4">
+        <section className="flex items-center justify-center px-6 py-12 sm:px-12 lg:px-14">
+          <div className="w-full max-w-[380px]">
+            <div className="mb-9 flex items-center gap-2.5 lg:hidden">
+              <span className="grid h-10 w-10 place-items-center rounded-2xl bg-foreground text-background"><span className="display-font text-2xl font-black">f.</span></span>
+              <span className="display-font text-xl font-extrabold tracking-tight">primefinance</span>
+            </div>
+            <p className="section-eyebrow">ACESSO À SUA CONTA</p>
+            <h2 className="display-font mt-3 text-[clamp(2rem,4vw,2.75rem)] font-extrabold leading-tight tracking-[-.055em]">Bem-vindo de volta.</h2>
+            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">Entre para acompanhar tudo o que importa para você.</p>
+            <form onSubmit={handleSubmit} className="mt-9 space-y-5">
               <div className="space-y-2">
-                <Label htmlFor="email">E-mail</Label>
+                <Label htmlFor="email" className="text-xs font-bold">E-mail</Label>
                 <Input
                   id="email"
                   type="email"
@@ -79,22 +74,13 @@ export function AuthScreen() {
                   required
                   disabled={loading}
                   autoComplete="email"
-                  className="bg-background/30 focus-visible:ring-primary border-border/60"
+                  className="h-12 rounded-xl border-border bg-background px-4"
                 />
               </div>
-
               <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="password">Senha</Label>
-                  <button
-                    type="button"
-                    className="text-xs text-primary hover:underline"
-                    onClick={() =>
-                      toast.info("Por favor, entre em contato para recuperação de senha.")
-                    }
-                  >
-                    Esqueceu a senha?
-                  </button>
+                <div className="flex items-center justify-between gap-2">
+                  <Label htmlFor="password" className="text-xs font-bold">Senha</Label>
+                  <button type="button" className="text-xs font-semibold text-primary hover:underline" onClick={() => toast.info("Entre em contato para recuperar sua senha.")}>Esqueceu a senha?</button>
                 </div>
                 <Input
                   id="password"
@@ -104,30 +90,21 @@ export function AuthScreen() {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   disabled={loading}
-                  className="bg-background/30 focus-visible:ring-primary border-border/60"
+                  autoComplete="current-password"
+                  className="h-12 rounded-xl border-border bg-background px-4"
                 />
               </div>
-            </CardContent>
-
-            <CardFooter className="flex flex-col space-y-4">
-              <Button
-                type="submit"
-                className="w-full relative overflow-hidden group font-semibold"
-                disabled={loading}
-              >
-                {loading ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <>
-                    <Sparkles className="mr-2 h-4 w-4 text-primary-foreground group-hover:animate-bounce" />
-                    Entrar
-                  </>
-                )}
+              <Button type="submit" className="h-12 w-full justify-between rounded-xl px-5 text-sm font-bold" disabled={loading}>
+                {loading ? <><span>Entrando...</span><Loader2 className="h-4 w-4 animate-spin" /></> : <><span>Entrar na minha conta</span><ArrowUpRight className="h-4 w-4" /></>}
               </Button>
-            </CardFooter>
-          </form>
-        </Card>
+            </form>
+            <div className="mt-8 flex items-center gap-2 border-t border-border pt-5 text-xs text-muted-foreground">
+              <Sparkle className="h-4 w-4 text-primary" />
+              Um lugar mais simples para suas finanças.
+            </div>
+          </div>
+        </section>
       </div>
-    </div>
+    </main>
   );
 }
