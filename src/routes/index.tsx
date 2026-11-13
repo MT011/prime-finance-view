@@ -97,7 +97,7 @@ function DashboardPage() {
   return (
     <div className="min-h-screen">
       <AppHeader greeting />
-      <main className="app-page space-y-7 md:space-y-9">
+      <main className="app-page space-y-6 md:space-y-8">
         <section className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
           <div>
             <p className="section-eyebrow">SEU PAINEL · {monthLabel}</p>
@@ -106,9 +106,6 @@ function DashboardPage() {
             </h2>
             <p className="mt-2 text-sm text-muted-foreground">Sua vida financeira, sem complicação.</p>
           </div>
-          <Button variant="outline" className="w-fit rounded-full border-border bg-card px-4 font-semibold" onClick={() => navigate({ to: "/movimentacoes" })}>
-            <CalendarDays className="mr-1 h-4 w-4" /> Ver movimentações <ArrowRight className="ml-1 h-3.5 w-3.5" />
-          </Button>
         </section>
 
         <section aria-label="Resumo financeiro" className="grid gap-4 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
@@ -181,6 +178,12 @@ function DashboardPage() {
             </Card>
           </div>
         </section>
+
+        <div className="flex justify-end" aria-label="Acesso ao histórico de movimentações">
+          <Button variant="outline" className="w-full rounded-full border-border bg-card px-5 font-semibold sm:w-auto" onClick={() => navigate({ to: "/movimentacoes" })}>
+            <CalendarDays className="mr-1 h-4 w-4" /> Ver movimentações <ArrowRight className="ml-1 h-3.5 w-3.5" />
+          </Button>
+        </div>
 
         <section className="grid gap-4 lg:grid-cols-[.9fr_1.1fr]">
           <Card className="app-section-card">

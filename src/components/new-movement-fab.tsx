@@ -27,14 +27,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useCategories } from "@/hooks/queries";
 import { toast } from "sonner";
-
-function parseCurrencyInput(value: string): number {
-  const trimmed = value.trim().replace(/R\$/gi, "").replace(/\s/g, "");
-  const normalized = trimmed.includes(",")
-    ? trimmed.replace(/\./g, "").replace(",", ".")
-    : /^\d{1,3}(\.\d{3})+$/.test(trimmed) ? trimmed.replace(/\./g, "") : trimmed;
-  return Number(normalized);
-}
+import { formatCurrencyInput, parseCurrencyInput } from "@/lib/currency-input";
 
 export function NewMovementFab() {
   const [open, setOpen] = useState(false);
@@ -289,9 +282,9 @@ export function NewMovementFab() {
               aria-label="Valor do lançamento em reais"
               className="mt-1 h-14 border-0 !bg-transparent px-0 font-[Urbanist] text-[34px] font-extrabold tracking-tight shadow-none placeholder:text-muted-foreground/40 focus-visible:ring-0"
               placeholder="0,00"
-              inputMode="decimal" 
+              inputMode="numeric"
               value={amount}
-              onChange={(e) => setAmount(e.target.value)}
+              onChange={(e) => setAmount(formatCurrencyInput(e.target.value))}
               disabled={saving}
             />
           </div>
