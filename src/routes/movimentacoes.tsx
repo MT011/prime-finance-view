@@ -84,11 +84,11 @@ export const Route = createFileRoute("/movimentacoes")({
 function getInvoiceMovements(movements: any[], cardId: string, monthKey: string) {
   return movements
     .filter((m) => m.card_id === cardId && m.invoice_month === monthKey)
-    // Mais recentes primeiro, como na lista geral de lançamentos.
+    // Ordem cronológica crescente: lançamentos mais antigos primeiro.
     .sort((a, b) =>
-      (b.date || "").localeCompare(a.date || "") ||
-      (b.created_at || "").localeCompare(a.created_at || "") ||
-      (b.id || "").localeCompare(a.id || ""),
+      (a.date || "").localeCompare(b.date || "") ||
+      (a.created_at || "").localeCompare(b.created_at || "") ||
+      (a.id || "").localeCompare(b.id || ""),
     );
 }
 
@@ -99,7 +99,7 @@ function getInvoiceMonthsFromMovements(movements: any[], cardId: string): string
       months.add(m.invoice_month);
     }
   });
-  return Array.from(months).sort().reverse();
+  return Array.from(months).sort();
 }
 
 const PAGE_SIZE = 8;
@@ -567,11 +567,11 @@ function MovimentacoesPage() {
         if (type !== "all" && m.type !== type) return false;
         return true;
       })
-      // Lançamentos recém-cadastrados primeiro, mesmo que pertençam a outra fatura.
+      // Ordem cronológica crescente também na lista geral.
       .sort((a, b) =>
-        (b.created_at || "").localeCompare(a.created_at || "") ||
-        (b.date || "").localeCompare(a.date || "") ||
-        (b.id || "").localeCompare(a.id || ""),
+        (a.date || "").localeCompare(b.date || "") ||
+        (a.created_at || "").localeCompare(b.created_at || "") ||
+        (a.id || "").localeCompare(b.id || ""),
       );
   }, [movements, search, month, cat, acc, type, creditCards]);
 
