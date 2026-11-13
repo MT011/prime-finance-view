@@ -18,7 +18,7 @@ import { Download, Upload, KeyRound, Bell, Globe, Palette, Coins } from "lucide-
 export const Route = createFileRoute("/configuracoes")({
   head: () => ({
     meta: [
-      { title: "Configurações — Finance Dashboard" },
+      { title: "Configurações — Prime Finance" },
       { name: "description", content: "Preferências, notificações e dados da conta." },
     ],
   }),
