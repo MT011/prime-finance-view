@@ -98,7 +98,7 @@ function getGoalDisplayTitle(goal: any) {
 export const Route = createFileRoute("/metas")({
   head: () => ({
     meta: [
-      { title: "Metas — Finance Dashboard" },
+      { title: "Metas — Prime Finance" },
       { name: "description", content: "Acompanhe suas metas financeiras mensais e anuais." },
     ],
   }),
