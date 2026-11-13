@@ -82,7 +82,14 @@ export const Route = createFileRoute("/movimentacoes")({
 });
 
 function getInvoiceMovements(movements: any[], cardId: string, monthKey: string) {
-  return movements.filter((m) => m.card_id === cardId && m.invoice_month === monthKey);
+  return movements
+    .filter((m) => m.card_id === cardId && m.invoice_month === monthKey)
+    // Mais recentes primeiro, como na lista geral de lançamentos.
+    .sort((a, b) =>
+      (b.date || "").localeCompare(a.date || "") ||
+      (b.created_at || "").localeCompare(a.created_at || "") ||
+      (b.id || "").localeCompare(a.id || ""),
+    );
 }
 
 function getInvoiceMonthsFromMovements(movements: any[], cardId: string): string[] {
@@ -92,7 +99,7 @@ function getInvoiceMonthsFromMovements(movements: any[], cardId: string): string
       months.add(m.invoice_month);
     }
   });
-  return Array.from(months).sort();
+  return Array.from(months).sort().reverse();
 }
 
 const PAGE_SIZE = 8;
@@ -816,11 +823,7 @@ function MovimentacoesPage() {
                               {isSelected && (
                                 <div className="mt-3">
                                   {renderMovementTable(
-                                    movements.filter(
-                                      (m) =>
-                                        m.card_id === selectedCardId &&
-                                        m.invoice_month === monthKey,
-                                    ),
+                                    getInvoiceMovements(movements, selectedCardId!, monthKey),
                                     creditCards,
                                     format,
                                     handleEditRequest,
