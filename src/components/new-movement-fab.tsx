@@ -6,6 +6,13 @@ import { getCreditCardInvoiceInfo, getInstallmentInvoiceInfos, parseLocalDate } 
 
 type MovementNature = "credito" | "debito" | "pix";
 type ExpenseType = "fixo" | "variavel";
+
+function formatAmountInput(digits: string) {
+  return (Number(digits || "0") / 100).toLocaleString("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
 import {
   Dialog,
   DialogContent,
@@ -14,7 +21,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { CurrencyInput } from "@/components/currency-input";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -52,7 +59,7 @@ export function NewMovementFab() {
     .map((c) => c.name);
 
   const handleSave = async () => {
-    const numAmount = parseFloat(amount.replace(",", "."));
+    const numAmount = Number(amount || "0") / 100;
     if (isNaN(numAmount) || numAmount <= 0) {
       toast.error("Por favor, digite um valor válido maior que zero.");
       return;
@@ -267,9 +274,12 @@ export function NewMovementFab() {
 
           <div className="space-y-2">
             <Label>Valor</Label>
-            <CurrencyInput
-              value={amount}
-              onValueChange={setAmount}
+            <Input
+              type="text"
+              inputMode="numeric"
+              placeholder="0,00"
+              value={formatAmountInput(amount)}
+              onChange={(e) => setAmount(e.target.value.replace(/\\D/g, ""))}
               disabled={saving}
             />
           </div>
@@ -368,7 +378,7 @@ export function NewMovementFab() {
                     <SelectContent>
                       {Array.from({ length: 24 }, (_, i) => i + 1).map((n) => (
                         <SelectItem key={n} value={String(n)}>
-                          {n}x {n > 1 ? `- ${(parseFloat(amount.replace(",", ".")) / n).toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 2 })}` : ""}
+                          {n}x {n > 1 ? `- ${((Number(amount || "0") / 100) / n).toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 2 })}` : ""}
                         </SelectItem>
                       ))}
                     </SelectContent>
