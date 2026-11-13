@@ -12,6 +12,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
+import { CurrencyInput } from "@/components/currency-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -1181,11 +1182,9 @@ function MovimentacoesPage() {
 
               <div className="space-y-2">
                 <Label>Valor</Label>
-                <Input
-                  placeholder="R$ 0,00"
-                  inputMode="decimal"
+                <CurrencyInput
                   value={editAmount}
-                  onChange={(e) => setEditAmount(e.target.value)}
+                  onValueChange={setEditAmount}
                   disabled={editSaving || (editMode === "all" && !!movementToEdit?.installment_group_id && !movementToEdit?.recurring_group_id)}
                 />
               </div>
