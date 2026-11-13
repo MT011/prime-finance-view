@@ -143,7 +143,7 @@ export function AppSidebar() {
         { title: "Início", url: "/", icon: LayoutDashboard },
         { title: "Lançamentos", url: "/movimentacoes", icon: ArrowLeftRight },
         { title: "Cartões", url: "/cartoes", icon: CreditCard },
-        { title: "Metas", url: "/metas", icon: Target },
+        { title: "Categorias", url: "/categorias", icon: Tags },
       ].map((item) => {
         const active = item.url === "/" ? pathname === "/" : pathname === item.url || pathname.startsWith(item.url + "/");
         return (
@@ -155,7 +155,7 @@ export function AppSidebar() {
       })}
       <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
         <SheetTrigger asChild>
-          <button type="button" aria-label="Abrir mais opções" aria-expanded={moreOpen} className={`flex min-w-0 flex-col items-center gap-1 rounded-xl px-1 py-1.5 text-[10px] font-medium transition-colors ${moreOpen || ["/categorias", "/relatorios", "/configuracoes", "/perfil"].includes(pathname) ? "text-primary" : "text-muted-foreground"}`}>
+          <button type="button" aria-label="Abrir mais opções" aria-expanded={moreOpen} className={`flex min-w-0 flex-col items-center gap-1 rounded-xl px-1 py-1.5 text-[10px] font-medium transition-colors ${moreOpen || ["/metas", "/relatorios", "/configuracoes", "/perfil"].includes(pathname) ? "text-primary" : "text-muted-foreground"}`}>
             <Menu className="h-5 w-5" />
             <span>Mais</span>
           </button>
@@ -167,7 +167,7 @@ export function AppSidebar() {
           </SheetHeader>
           <div className="grid grid-cols-2 gap-3">
             {[
-              { title: "Categorias", subtitle: "Criar e gerenciar", url: "/categorias", icon: Tags },
+              { title: "Metas", subtitle: "Seus objetivos", url: "/metas", icon: Target },
               { title: "Relatórios", subtitle: "Analisar gastos", url: "/relatorios", icon: BarChart3 },
               { title: "Configurações", subtitle: "Preferências", url: "/configuracoes", icon: Settings },
               { title: "Perfil", subtitle: "Minha conta", url: "/perfil", icon: User },
