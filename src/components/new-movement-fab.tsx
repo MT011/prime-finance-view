@@ -14,7 +14,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
+import { CurrencyInput } from "@/components/currency-input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -267,11 +267,9 @@ export function NewMovementFab() {
 
           <div className="space-y-2">
             <Label>Valor</Label>
-            <Input 
-              placeholder="R$ 0,00" 
-              inputMode="decimal" 
+            <CurrencyInput
               value={amount}
-              onChange={(e) => setAmount(e.target.value)}
+              onValueChange={setAmount}
               disabled={saving}
             />
           </div>
