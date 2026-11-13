@@ -114,7 +114,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
         rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap",
+        href: "https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Urbanist:wght@400;500;600;700;800&display=swap",
       },
     ],
   }),
@@ -133,7 +133,7 @@ function RootShell({ children }: { children: ReactNode }) {
             __html: `
               (function() {
                 try {
-                  var theme = localStorage.getItem("dash-theme") || "light";
+                  var theme = localStorage.getItem("dash-theme") || "dark";
                   document.documentElement.classList.add(theme);
                 } catch(e) {}
               })();
