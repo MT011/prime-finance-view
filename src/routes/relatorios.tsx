@@ -25,7 +25,7 @@ import { ArrowUpRight, TrendingDown, TrendingUp } from "lucide-react";
 export const Route = createFileRoute("/relatorios")({
   head: () => ({
     meta: [
-      { title: "Relatórios — Finance Dashboard" },
+      { title: "Relatórios — Prime Finance" },
       { name: "description", content: "Relatórios visuais das suas finanças." },
     ],
   }),
