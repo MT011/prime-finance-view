@@ -1194,7 +1194,7 @@ function MovimentacoesPage() {
                   inputMode="numeric"
                   placeholder="0,00"
                   value={formatAmountInput(editAmount)}
-                  onChange={(e) => setEditAmount(e.target.value.replace(/\\D/g, ""))}
+                  onChange={(e) => setEditAmount(e.target.value.replace(/\D/g, ""))}
                   disabled={editSaving || (editMode === "all" && !!movementToEdit?.installment_group_id && !movementToEdit?.recurring_group_id)}
                 />
               </div>
