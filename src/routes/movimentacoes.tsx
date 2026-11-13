@@ -12,6 +12,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
+
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -93,6 +94,13 @@ function getInvoiceMonthsFromMovements(movements: any[], cardId: string): string
 }
 
 const PAGE_SIZE = 8;
+
+function formatAmountInput(digits: string) {
+  return (Number(digits || "0") / 100).toLocaleString("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
 
 function renderMovementTable(
   data: any[],
@@ -299,7 +307,7 @@ function MovimentacoesPage() {
   const handleEditRequest = (movement: any) => {
     setMovementToEdit(movement);
     setEditType(movement.type);
-    setEditAmount(String(movement.amount));
+    setEditAmount(String(Math.round(Number(movement.amount) * 100)));
     setEditCategory(movement.category);
     setEditAccount(movement.account);
     setEditDate(movement.date.split("T")[0]);
@@ -312,7 +320,7 @@ function MovimentacoesPage() {
   };
 
   const handleEditSave = async () => {
-    const numAmount = parseFloat(editAmount.replace(",", "."));
+    const numAmount = Number(editAmount || "0") / 100;
     if (isNaN(numAmount) || numAmount <= 0) {
       toast.error("Por favor, digite um valor válido maior que zero.");
       return;
@@ -1182,10 +1190,11 @@ function MovimentacoesPage() {
               <div className="space-y-2">
                 <Label>Valor</Label>
                 <Input
-                  placeholder="R$ 0,00"
-                  inputMode="decimal"
-                  value={editAmount}
-                  onChange={(e) => setEditAmount(e.target.value)}
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="0,00"
+                  value={formatAmountInput(editAmount)}
+                  onChange={(e) => setEditAmount(e.target.value.replace(/\D/g, ""))}
                   disabled={editSaving || (editMode === "all" && !!movementToEdit?.installment_group_id && !movementToEdit?.recurring_group_id)}
                 />
               </div>
