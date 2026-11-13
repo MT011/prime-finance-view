@@ -30,7 +30,9 @@ import { toast } from "sonner";
 
 function parseCurrencyInput(value: string): number {
   const trimmed = value.trim().replace(/R\$/gi, "").replace(/\s/g, "");
-  const normalized = trimmed.includes(",") ? trimmed.replace(/\./g, "").replace(",", ".") : trimmed;
+  const normalized = trimmed.includes(",")
+    ? trimmed.replace(/\./g, "").replace(",", ".")
+    : /^\d{1,3}(\.\d{3})+$/.test(trimmed) ? trimmed.replace(/\./g, "") : trimmed;
   return Number(normalized);
 }
 
@@ -386,7 +388,7 @@ export function NewMovementFab() {
                     <SelectContent>
                       {Array.from({ length: 24 }, (_, i) => i + 1).map((n) => (
                         <SelectItem key={n} value={String(n)}>
-                          {n}x {n > 1 ? `- ${(amountNumber / n).toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 2 })}` : ""}
+                          {n}x {n > 1 && Number.isFinite(amountNumber) && amountNumber > 0 ? `- ${(amountNumber / n).toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 2 })}` : ""}
                         </SelectItem>
                       ))}
                     </SelectContent>
