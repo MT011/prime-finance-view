@@ -81,15 +81,17 @@ export const Route = createFileRoute("/movimentacoes")({
   component: MovimentacoesPage,
 });
 
+// Ordena pelo instante em que o usuário cadastrou o lançamento, não pela data da compra.
+// Usamos a data da movimentação apenas como desempate/alternativa para dados antigos.
+function compareByRegistrationDesc(a: { created_at?: string | null; date?: string | null; id?: string | null }, b: { created_at?: string | null; date?: string | null; id?: string | null }) {
+  return (b.created_at || b.date || "").localeCompare(a.created_at || a.date || "") ||
+    (b.id || "").localeCompare(a.id || "");
+}
+
 function getInvoiceMovements(movements: any[], cardId: string, monthKey: string) {
   return movements
     .filter((m) => m.card_id === cardId && m.invoice_month === monthKey)
-    // Ordem cronológica crescente: lançamentos mais antigos primeiro.
-    .sort((a, b) =>
-      (a.date || "").localeCompare(b.date || "") ||
-      (a.created_at || "").localeCompare(b.created_at || "") ||
-      (a.id || "").localeCompare(b.id || ""),
-    );
+    .sort(compareByRegistrationDesc);
 }
 
 function getInvoiceMonthsFromMovements(movements: any[], cardId: string): string[] {
@@ -567,12 +569,8 @@ function MovimentacoesPage() {
         if (type !== "all" && m.type !== type) return false;
         return true;
       })
-      // Ordem cronológica crescente também na lista geral.
-      .sort((a, b) =>
-        (a.date || "").localeCompare(b.date || "") ||
-        (a.created_at || "").localeCompare(b.created_at || "") ||
-        (a.id || "").localeCompare(b.id || ""),
-      );
+      // O lançamento cadastrado por último fica no início da lista.
+      .sort(compareByRegistrationDesc);
   }, [movements, search, month, cat, acc, type, creditCards]);
 
   // Mudança de filtro ou novo registro sempre volta para a primeira página.
