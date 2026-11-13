@@ -92,7 +92,7 @@ function CategoriaList({
   };
 
   return (
-    <Card className="glass-card">
+    <Card className="glass-card app-section-card">
       <CardHeader className="flex flex-row items-center justify-between">
         <div className="flex items-center gap-2">
           <span className={`grid h-8 w-8 place-items-center rounded-lg ${badgeCls}`}>{icon}</span>
@@ -103,6 +103,7 @@ function CategoriaList({
         </Button>
       </CardHeader>
       <CardContent className="space-y-2">
+        {items.length === 0 && <p className="py-8 text-center text-sm text-muted-foreground">Nenhuma categoria cadastrada. Toque em Adicionar para começar.</p>}
         {items.map((c) => {
           const hasBudget = budgets?.[c] !== undefined;
           return (
@@ -286,7 +287,7 @@ function CategoriasPage() {
   return (
     <div className="flex min-h-screen flex-col">
       <AppHeader title="Categorias" subtitle="Organize suas receitas e despesas" />
-      <main className="flex-1 space-y-6 p-4 md:p-8">
+      <main className="app-page flex-1 space-y-6">
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <CategoriaList
             title="Receitas"
