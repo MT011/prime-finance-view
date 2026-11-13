@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AppHeader } from "@/components/app-header";
 import { NewMovementFab } from "@/components/new-movement-fab";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -299,7 +299,11 @@ function MovimentacoesPage() {
 
   const { data: movements = [], isLoading } = useMovements();
   const { data: creditCards = [] } = useCreditCards();
-  const accounts = creditCards.map((c) => c.name);
+  // Inclui todas as contas presentes nos lançamentos, inclusive compras no cartão.
+  const accounts = Array.from(new Set([
+    ...creditCards.map((c) => c.name),
+    ...movements.map((m) => m.account).filter(Boolean),
+  ])).sort((a, b) => a.localeCompare(b, "pt-BR"));
   const deleteMovementMutation = useDeleteMovement();
   const bulkDeleteMutation = useBulkDeleteMovements();
 
@@ -545,15 +549,27 @@ function MovimentacoesPage() {
   const allCategories = [...storedCategories.receitas, ...storedCategories.despesas];
 
   const filtered = useMemo(() => {
-    return movements.filter((m) => {
-      if (search && !m.description.toLowerCase().includes(search.toLowerCase())) return false;
-      if (month !== "all" && parseLocalDate(m.date).getMonth() + 1 !== Number(month)) return false;
-      if (cat !== "all" && m.category !== cat) return false;
-      if (acc !== "all" && m.account !== acc) return false;
-      if (type !== "all" && m.type !== type) return false;
-      return true;
-    });
-  }, [movements, search, month, cat, acc, type]);
+    return movements
+      // A lista geral inclui receitas, despesas e compras de cartão.
+      // A fatura é uma outra visão dos mesmos registros, não uma lista exclusiva.
+      .filter((m) => {
+        if (search && !(m.description || "").toLowerCase().includes(search.toLowerCase())) return false;
+        if (month !== "all" && parseLocalDate(m.date).getMonth() + 1 !== Number(month)) return false;
+        if (cat !== "all" && m.category !== cat) return false;
+        if (acc !== "all" && m.account !== acc && !creditCards.some((c) => c.id === m.card_id && c.name === acc)) return false;
+        if (type !== "all" && m.type !== type) return false;
+        return true;
+      })
+      // Lançamentos recém-cadastrados primeiro, mesmo que pertençam a outra fatura.
+      .sort((a, b) =>
+        (b.created_at || "").localeCompare(a.created_at || "") ||
+        (b.date || "").localeCompare(a.date || "") ||
+        (b.id || "").localeCompare(a.id || ""),
+      );
+  }, [movements, search, month, cat, acc, type, creditCards]);
+
+  // Mudança de filtro ou novo registro sempre volta para a primeira página.
+  useEffect(() => setPage(1), [search, month, cat, acc, type, movements]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const pageData = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -674,7 +690,7 @@ function MovimentacoesPage() {
             </Card>
 
             {/* Card Tabs */}
-            <div className="flex items-center justify-between gap-2">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <Tabs
                 value={cardViewTab}
                 onValueChange={(v) =>
@@ -683,16 +699,16 @@ function MovimentacoesPage() {
                     search: { card: selectedCard.id, tab: v as "atual" | "proxima" | "historico" },
                   })
                 }
-                className="flex-1"
+                className="min-w-0 w-full sm:flex-1"
               >
-                <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="atual">Fatura Atual</TabsTrigger>
-                  <TabsTrigger value="proxima">Próxima Fatura</TabsTrigger>
-                  <TabsTrigger value="historico">Histórico</TabsTrigger>
+                <TabsList className="grid h-auto min-h-10 w-full min-w-0 grid-cols-3 gap-1 p-1">
+                  <TabsTrigger value="atual" className="min-w-0 px-1.5 text-xs whitespace-nowrap sm:px-3 sm:text-sm"><span className="sm:hidden">Atual</span><span className="hidden sm:inline">Fatura Atual</span></TabsTrigger>
+                  <TabsTrigger value="proxima" className="min-w-0 px-1.5 text-xs whitespace-nowrap sm:px-3 sm:text-sm"><span className="sm:hidden">Próxima</span><span className="hidden sm:inline">Próxima Fatura</span></TabsTrigger>
+                  <TabsTrigger value="historico" className="min-w-0 px-1.5 text-xs whitespace-nowrap sm:px-3 sm:text-sm">Histórico</TabsTrigger>
                 </TabsList>
               </Tabs>
               {selectionMode ? (
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center justify-end gap-2">
                   <span className="text-xs text-muted-foreground whitespace-nowrap">
                     {selectedIds.size} selecionado(s)
                   </span>
