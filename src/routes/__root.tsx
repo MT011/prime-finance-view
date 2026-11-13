@@ -85,21 +85,21 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Dashboard — Finance Dashboard" },
+      { title: "Prime Finance — Seu dinheiro com clareza" },
       {
         name: "description",
         content:
           "Dashboard financeiro pessoal moderno para acompanhar receitas, despesas, metas e patrimônio com uma experiência premium.",
       },
-      { name: "author", content: "Finance Dashboard" },
-      { property: "og:title", content: "Dashboard — Finance Dashboard" },
+      { name: "author", content: "Prime Finance" },
+      { property: "og:title", content: "Dashboard — Prime Finance" },
       {
         property: "og:description",
         content: "Controle financeiro pessoal moderno, elegante e responsivo.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: "Dashboard — Finance Dashboard" },
+      { name: "twitter:title", content: "Dashboard — Prime Finance" },
       { name: "description", content: "Visão geral das suas finanças pessoais: saldo, receitas, despesas e metas." },
       { property: "og:description", content: "Visão geral das suas finanças pessoais: saldo, receitas, despesas e metas." },
       { name: "twitter:description", content: "Visão geral das suas finanças pessoais: saldo, receitas, despesas e metas." },
