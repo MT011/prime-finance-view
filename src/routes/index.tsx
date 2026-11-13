@@ -8,7 +8,7 @@ import { parseLocalDate, getCurrentInvoiceMonthKey } from "@/lib/credit-cards";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Eye, EyeOff, ArrowDownLeft, ArrowUpRight, Wallet, CreditCard, Target, ChevronRight, Plus, CalendarDays, AlertTriangle, CheckCircle2, Activity } from "lucide-react";
+import { Eye, EyeOff, ArrowDownLeft, ArrowUpRight, Wallet, CreditCard, Target, ChevronRight, CalendarDays, AlertTriangle, CheckCircle2, Activity, ArrowRight, ReceiptText, TrendingUp, TrendingDown } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({ meta: [
@@ -67,157 +67,230 @@ function DashboardPage() {
   });
   const monthLabel = new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(new Date());
 
+  const hasData = summary.income > 0 || summary.expenses > 0;
+  const ratio = summary.income > 0 ? (summary.expenses / summary.income) * 100 : null;
+  const status = !hasData ? "empty" : ratio === null || ratio > 100 ? "bad" : ratio > 60 ? "medium" : "good";
+  const health = {
+    good: { label: "Dentro do planejado", title: "Seu mês está equilibrado", description: "Seus gastos estão em uma faixa confortável.", icon: CheckCircle2, color: "text-success", progress: "bg-success" },
+    medium: { label: "Merece atenção", title: "Olho nos próximos gastos", description: "Boa parte das entradas já está comprometida.", icon: Activity, color: "text-warning", progress: "bg-warning" },
+    bad: { label: "Precisa de atenção", title: ratio === null ? "Sem receitas no mês" : "Gastos acima da renda", description: ratio === null ? "Cadastre suas receitas para acompanhar o comprometimento." : "As despesas deste mês superaram suas entradas.", icon: AlertTriangle, color: "text-destructive", progress: "bg-destructive" },
+    empty: { label: "Seu ponto de partida", title: "Tudo começa aqui", description: "Registre receitas e despesas para conhecer sua saúde financeira.", icon: Activity, color: "text-muted-foreground", progress: "bg-muted-foreground" },
+  }[status];
+  const HealthIcon = health.icon;
+
   if (loadingMovements || loadingGoals) {
-    return <div className="flex min-h-[60vh] items-center justify-center text-sm text-muted-foreground">Carregando suas finanças...</div>;
+    return (
+      <div className="min-h-screen">
+        <AppHeader greeting />
+        <div className="app-page space-y-5">
+          <div className="h-16 w-2/3 animate-pulse rounded-2xl bg-muted" />
+          <div className="h-64 animate-pulse rounded-[30px] bg-muted" />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="h-44 animate-pulse rounded-[24px] bg-muted" />
+            <div className="h-44 animate-pulse rounded-[24px] bg-muted" />
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
     <div className="min-h-screen">
       <AppHeader greeting />
-      <main className="mx-auto w-full max-w-7xl space-y-5 px-4 pb-28 pt-5 md:space-y-7 md:px-8 md:pb-10 md:pt-8">
-        <section className="flex items-center justify-between gap-3">
+      <main className="app-page space-y-7 md:space-y-9">
+        <section className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[.14em] text-muted-foreground">Visão geral</p>
-            <h2 className="mt-1 text-lg font-semibold capitalize text-foreground">{monthLabel}</h2>
+            <p className="section-eyebrow">SEU PAINEL · {monthLabel}</p>
+            <h2 className="display-font mt-2 max-w-[700px] text-[clamp(1.85rem,4vw,3rem)] font-extrabold leading-[1.07] tracking-[-.055em]">
+              Clareza para decidir <span className="text-primary">melhor.</span>
+            </h2>
+            <p className="mt-2 text-sm text-muted-foreground">Sua vida financeira, sem complicação.</p>
           </div>
-          <Button onClick={() => navigate({ to: "/movimentacoes" })} variant="outline" size="sm" className="rounded-full border-border bg-card">
-            <CalendarDays className="mr-2 h-4 w-4" /> Ver mês
+          <Button variant="outline" className="w-fit rounded-full border-border bg-card px-4 font-semibold" onClick={() => navigate({ to: "/movimentacoes" })}>
+            <CalendarDays className="mr-1 h-4 w-4" /> Ver movimentações <ArrowRight className="ml-1 h-3.5 w-3.5" />
           </Button>
         </section>
 
-        <section className="blue-glow-hero rounded-3xl p-5 text-white md:p-7">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="text-sm text-white/70">Saldo disponível</p>
+        <section aria-label="Resumo financeiro" className="grid gap-4 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+          <div className="editorial-hero flex min-h-[292px] flex-col justify-between rounded-[30px] p-6 sm:p-8">
+            <div className="flex items-center justify-between gap-3">
+              <span className="hero-kicker">FINANÇAS / VISÃO GERAL</span>
+              <span className="editorial-chip"><Wallet className="h-3.5 w-3.5" /> Sua carteira</span>
+            </div>
+            <div className="my-7 sm:my-8">
+              <p className="text-[13px] font-medium text-[#67635c]">Saldo disponível</p>
               <div className="mt-2 flex items-center gap-3">
-                <h2 className="text-3xl font-bold tracking-tight md:text-4xl">{format(summary.balance)}</h2>
-                <button onClick={toggle} aria-label={hidden ? "Mostrar valores" : "Ocultar valores"} className="rounded-full p-2 text-white/75 transition hover:bg-white/10 hover:text-white">
-                  {hidden ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                <h2 className="hero-value min-w-0 break-all text-[clamp(2.15rem,5.4vw,4.5rem)]">{format(summary.balance)}</h2>
+                <button type="button" onClick={toggle} aria-label={hidden ? "Mostrar valores" : "Ocultar valores"} className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-[#c9c2b6] transition-colors hover:bg-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b65a41]">
+                  {hidden ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
+              <p className="mt-3 text-xs text-[#777167]">Seu dinheiro registrado até agora.</p>
             </div>
-            <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-white/10">
-              <Wallet className="h-5 w-5 text-white" />
-            </div>
-          </div>
-          <div className="mt-6 grid grid-cols-2 gap-4 border-t border-white/15 pt-4">
-            <div className="flex items-center gap-2">
-              <span className="grid h-8 w-8 place-items-center rounded-full bg-[#0D9B72]/20 text-[#6ee7bd]"><ArrowDownLeft className="h-4 w-4" /></span>
-              <div className="min-w-0"><p className="text-xs text-white/60">Entradas</p><p className="truncate text-sm font-semibold">{format(summary.income)}</p></div>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="grid h-8 w-8 place-items-center rounded-full bg-[#E15B64]/20 text-[#ff9ca2]"><ArrowUpRight className="h-4 w-4" /></span>
-              <div className="min-w-0"><p className="text-xs text-white/60">Saídas</p><p className="truncate text-sm font-semibold">{format(summary.expenses)}</p></div>
-            </div>
-          </div>
-        </section>
-
-        <section className="grid grid-cols-2 gap-3 md:grid-cols-3">
-          <Card className="border-border/80 shadow-none"><CardContent className="p-4">
-            <p className="text-xs text-muted-foreground">Resultado do mês</p>
-            <p className={`mt-2 text-xl font-bold tracking-tight ${summary.savings >= 0 ? "text-[#0D9B72]" : "text-[#E15B64]"}`}>{format(summary.savings)}</p>
-            <p className="mt-1 text-[11px] text-muted-foreground">Entradas menos saídas</p>
-          </CardContent></Card>
-          <Card className="border-border/80 shadow-none"><CardContent className="p-4">
-            <p className="text-xs text-muted-foreground">Lançamentos</p>
-            <p className="mt-2 text-xl font-bold tracking-tight">{movements.length}</p>
-            <p className="mt-1 text-[11px] text-muted-foreground">Registros no total</p>
-          </CardContent></Card>
-          <Card className="col-span-2 overflow-hidden border-border/80 shadow-none md:col-span-1">
-            {(() => {
-              const hasData = summary.income > 0 || summary.expenses > 0;
-              const ratio = summary.income > 0 ? (summary.expenses / summary.income) * 100 : summary.expenses > 0 ? 101 : 0;
-              const status = !hasData ? "empty" : ratio <= 60 ? "good" : ratio <= 100 ? "medium" : "bad";
-              const styles = {
-                good: { shell: "border-emerald-500/30 bg-emerald-500/[0.07]", icon: "bg-emerald-500/15 text-emerald-500", title: "text-emerald-500", bar: "bg-emerald-500", badge: "bg-emerald-500/15 text-emerald-500", label: "Boa", description: "Seus gastos estão dentro de uma faixa confortável." },
-                medium: { shell: "border-amber-500/30 bg-amber-500/[0.07]", icon: "bg-amber-500/15 text-amber-500", title: "text-amber-500", bar: "bg-amber-500", badge: "bg-amber-500/15 text-amber-500", label: "Atenção", description: "Uma boa parte da sua renda já está comprometida." },
-                bad: { shell: "border-rose-500/35 bg-rose-500/[0.08]", icon: "bg-rose-500/15 text-rose-500", title: "text-rose-500", bar: "bg-rose-500", badge: "bg-rose-500/15 text-rose-500", label: "Crítica", description: "Suas despesas superaram suas receitas." },
-                empty: { shell: "border-border bg-muted/30", icon: "bg-muted text-muted-foreground", title: "text-foreground", bar: "bg-muted-foreground", badge: "bg-muted text-muted-foreground", label: "Sem dados", description: "Cadastre receitas e despesas para acompanhar sua saúde financeira." },
-              }[status];
-              const StatusIcon = status === "good" ? CheckCircle2 : status === "medium" ? Activity : status === "bad" ? AlertTriangle : Activity;
-              return <CardContent className={`space-y-3 border p-4 ${styles.shell}`}>
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-xs font-semibold text-muted-foreground">Saúde financeira</p>
-                  <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${styles.badge}`}>{styles.label}</span>
+            <div className="grid grid-cols-2 gap-4 border-t border-[#c9c1b5] pt-5">
+              <div className="flex min-w-0 items-start gap-2.5">
+                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-white/60"><ArrowDownLeft className="h-4 w-4 text-[#316d4c]" /></span>
+                <div className="min-w-0">
+                  <p className="text-[11px] text-[#777167]">Entradas no mês</p>
+                  <p className="mt-1 truncate text-sm font-extrabold tabular-nums text-[#272421] sm:text-lg">{format(summary.income)}</p>
                 </div>
-                <div className="flex items-center gap-2.5">
-                  <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl ${styles.icon}`}><StatusIcon className="h-5 w-5" /></span>
-                  <div className="min-w-0">
-                    <p className={`text-base font-bold tracking-tight ${styles.title}`}>{status === "good" ? "No caminho certo" : status === "medium" ? "Atenção aos gastos" : status === "bad" ? "Gastos acima da renda" : "Vamos começar?"}</p>
-                    <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">{styles.description}</p>
-                  </div>
-                </div>
-                {hasData && <div className="space-y-1.5">
-                  <div className="flex items-center justify-between text-[11px]">
-                    <span className="text-muted-foreground">Renda comprometida</span>
-                    <span className={`font-bold tabular-nums ${styles.title}`}>{Math.round(ratio)}%</span>
-                  </div>
-                  <div className="h-2 overflow-hidden rounded-full bg-muted">
-                    <div className={`h-full rounded-full transition-all duration-500 ${styles.bar}`} style={{ width: `${Math.min(ratio, 100)}%` }} />
-                  </div>
-                  <p className="text-[10px] text-muted-foreground">{status === "bad" ? `Você gastou ${(ratio - 100).toFixed(1).replace(".", ",")}% a mais do que recebeu.` : status === "medium" ? "Tente reduzir despesas para liberar mais da sua renda." : "Até 60% da renda comprometida: boa margem para seus objetivos."}</p>
-                </div>}
-              </CardContent>;
-            })()}
-          </Card>
-        </section>
-
-        <section className="grid gap-4 lg:grid-cols-[1.2fr_.8fr]">
-          <Card className="border-border/80 shadow-none">
-            <CardContent className="p-5">
-              <div className="mb-4 flex items-center justify-between">
-                <div><h3 className="font-semibold">Onde você gastou</h3><p className="text-xs text-muted-foreground">Maiores despesas deste mês</p></div>
-                <Button variant="ghost" size="sm" className="text-primary" onClick={() => navigate({ to: "/relatorios" })}>Detalhes <ChevronRight className="ml-1 h-4 w-4" /></Button>
               </div>
-              {summary.categories.length ? <div className="space-y-4">
-                {summary.categories.map(([category, amount]) => {
-                  const pct = summary.expenses > 0 ? Math.round(amount / summary.expenses * 100) : 0;
-                  return <div key={category} className="space-y-1.5">
-                    <div className="flex justify-between gap-3 text-sm"><span className="truncate font-medium">{category}</span><span className="shrink-0 text-muted-foreground">{format(amount)} <span className="text-xs">({pct}%)</span></span></div>
-                    <Progress value={pct} className="h-2 bg-secondary [&>div]:bg-[#356AE6]" />
-                  </div>;
-                })}
-              </div> : <p className="py-8 text-center text-sm text-muted-foreground">Suas despesas por categoria aparecerão aqui.</p>}
+              <div className="flex min-w-0 items-start gap-2.5">
+                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-white/60"><ArrowUpRight className="h-4 w-4 text-[#ad4f48]" /></span>
+                <div className="min-w-0">
+                  <p className="text-[11px] text-[#777167]">Saídas no mês</p>
+                  <p className="mt-1 truncate text-sm font-extrabold tabular-nums text-[#272421] sm:text-lg">{format(summary.expenses)}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
+            <Card className="app-section-card flex flex-col justify-between">
+              <CardContent className="flex h-full flex-col justify-between p-5 sm:p-6">
+                <div className="flex items-center justify-between">
+                  <p className="section-eyebrow">RESULTADO DO MÊS</p>
+                  <span className="icon-tile h-9 w-9">{summary.savings >= 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}</span>
+                </div>
+                <div className="mt-4">
+                  <p className={`display-font break-all text-[clamp(1.6rem,3vw,2.4rem)] font-extrabold leading-none tracking-tight tabular-nums ${summary.savings >= 0 ? "financial-positive" : "financial-negative"}`}>{format(summary.savings)}</p>
+                  <p className="mt-2 text-xs text-muted-foreground">Entradas menos saídas deste mês</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="app-section-card flex flex-col justify-between">
+              <CardContent className="p-5 sm:p-6">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="section-eyebrow">SAÚDE FINANCEIRA</p>
+                  <HealthIcon className={`h-5 w-5 ${health.color}`} />
+                </div>
+                <p className="display-font mt-3 text-lg font-extrabold leading-tight">{health.title}</p>
+                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{health.description}</p>
+                <div className="mt-4">
+                  <div className="flex items-center justify-between gap-2 text-[11px]">
+                    <span className="font-semibold text-muted-foreground">{health.label}</span>
+                    <span className={`font-extrabold tabular-nums ${health.color}`}>{ratio === null ? "—" : `${Math.round(ratio)}%`}</span>
+                  </div>
+                  {ratio !== null && (
+                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
+                      <div className={`h-full rounded-full transition-[width] duration-300 ${health.progress}`} style={{ width: `${Math.min(100, ratio)}%` }} />
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </section>
+
+        <section className="grid gap-4 lg:grid-cols-[.9fr_1.1fr]">
+          <Card className="app-section-card">
+            <CardContent className="p-5 sm:p-6">
+              <div className="mb-6 flex items-start justify-between gap-3">
+                <div><p className="section-eyebrow">DISTRIBUIÇÃO</p><h3 className="section-title mt-2">Onde você gastou</h3><p className="mt-1 text-xs text-muted-foreground">Maiores despesas deste mês</p></div>
+                <Button variant="ghost" size="sm" aria-label="Abrir relatórios de despesas" className="shrink-0 rounded-full" onClick={() => navigate({ to: "/relatorios" })}><ArrowRight className="h-4 w-4" /></Button>
+              </div>
+              {summary.categories.length ? (
+                <div className="space-y-5">
+                  {summary.categories.map(([category, amount]) => {
+                    const pct = summary.expenses > 0 ? Math.round(amount / summary.expenses * 100) : 0;
+                    return (
+                      <div key={category} className="space-y-2">
+                        <div className="flex items-center justify-between gap-3 text-sm">
+                          <span className="min-w-0 truncate font-semibold">{category}</span>
+                          <span className="shrink-0 text-xs font-bold tabular-nums">{format(amount)} <span className="font-normal text-muted-foreground">({pct}%)</span></span>
+                        </div>
+                        <Progress value={pct} className="h-1.5 bg-secondary [&>div]:bg-primary" />
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="flex min-h-[170px] flex-col items-center justify-center text-center">
+                  <span className="icon-tile mb-3"><ReceiptText className="h-5 w-5" /></span>
+                  <p className="text-sm font-semibold">Seus gastos aparecerão aqui</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Registre uma despesa para começar.</p>
+                </div>
+              )}
             </CardContent>
           </Card>
 
-          <Card className="border-border/80 shadow-none">
-            <CardContent className="p-5">
-              <div className="mb-4 flex items-center justify-between"><div><h3 className="font-semibold">Metas</h3><p className="text-xs text-muted-foreground">Acompanhe seus objetivos</p></div><Button variant="ghost" size="icon" onClick={() => navigate({ to: "/metas" })}><ChevronRight className="h-4 w-4" /></Button></div>
-              {goalPreview.length ? <div className="space-y-4">{goalPreview.map(goal => {
-                const current = Number(goal.current || 0), target = Number(goal.target || 0);
-                const pct = target > 0 ? Math.min(100, Math.round(current / target * 100)) : 0;
-                return <div key={goal.id} className="space-y-2">
-                  <div className="flex items-center gap-2"><Target className="h-4 w-4 text-primary" /><span className="min-w-0 flex-1 truncate text-sm font-medium">{goal.title}</span><span className="text-xs font-semibold text-primary">{pct}%</span></div>
-                  <Progress value={pct} className="h-2" />
-                  <p className="text-xs text-muted-foreground">{format(current)} de {format(target)}</p>
-                </div>;
-              })}</div> : <p className="py-8 text-center text-sm text-muted-foreground">Cadastre uma meta para acompanhar seu progresso.</p>}
+          <Card className="app-section-card">
+            <CardContent className="p-5 sm:p-6">
+              <div className="mb-5 flex items-start justify-between gap-3">
+                <div><p className="section-eyebrow">ATIVIDADE</p><h3 className="section-title mt-2">Últimas movimentações</h3><p className="mt-1 text-xs text-muted-foreground">{movements.length} lançamentos registrados</p></div>
+                <Button variant="ghost" size="sm" onClick={() => navigate({ to: "/movimentacoes" })} className="shrink-0 rounded-full" aria-label="Ver todas as movimentações"><ArrowRight className="h-4 w-4" /></Button>
+              </div>
+              {summary.recent.length ? (
+                <div className="divide-y divide-border/65">
+                  {summary.recent.map((item) => (
+                    <div key={item.id} className="flex items-center gap-3 py-3.5 first:pt-0 last:pb-0">
+                      <span className="icon-tile h-10 w-10 rounded-xl">
+                        {item.type === "receita" ? <ArrowDownLeft className="h-4 w-4 text-success" /> : <ArrowUpRight className="h-4 w-4 text-destructive" />}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-bold">{item.description || (item.type === "receita" ? "Receita" : "Despesa")}</span>
+                        <span className="block truncate text-[11px] text-muted-foreground">{item.category} · {parseLocalDate(item.date).toLocaleDateString("pt-BR")}</span>
+                      </span>
+                      <span className={`shrink-0 text-right text-xs font-bold tabular-nums sm:text-sm ${item.type === "receita" ? "text-success" : "text-foreground"}`}>
+                        {item.type === "receita" ? "+" : "−"}{format(Number(item.amount))}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex min-h-[170px] flex-col items-center justify-center text-center">
+                  <span className="icon-tile mb-3"><ArrowDownLeft className="h-5 w-5" /></span>
+                  <p className="text-sm font-semibold">Nenhuma movimentação ainda</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Use o botão + para registrar a primeira.</p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </section>
 
-        {cardPreview.length > 0 && <section>
-          <div className="mb-3 flex items-center justify-between"><div><h3 className="font-semibold">Seus cartões</h3><p className="text-xs text-muted-foreground">Resumo das faturas atuais</p></div><Button variant="ghost" size="sm" onClick={() => navigate({ to: "/cartoes" })}>Ver todos <ChevronRight className="ml-1 h-4 w-4" /></Button></div>
-          <div className="grid gap-3 sm:grid-cols-2">{cardPreview.map(card => <button key={card.id} onClick={() => navigate({ to: "/cartoes" })} className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 text-left transition hover:border-primary/40">
-            <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#356AE6]/10 text-[#356AE6]"><CreditCard className="h-5 w-5" /></span>
-            <span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold">{card.name}</span><span className="block text-xs text-muted-foreground">Vencimento dia {card.due_day}</span></span>
-            <span className="text-right"><span className="block text-xs text-muted-foreground">Fatura atual</span><span className="font-semibold">{format(card.total)}</span></span>
-          </button>)}</div>
-        </section>}
+        <section className="grid gap-4 lg:grid-cols-[1fr_1fr]">
+          <Card className="app-section-card">
+            <CardContent className="p-5 sm:p-6">
+              <div className="mb-5 flex items-start justify-between gap-3">
+                <div><p className="section-eyebrow">PLANOS</p><h3 className="section-title mt-2">Suas metas</h3><p className="mt-1 text-xs text-muted-foreground">O futuro também faz parte do presente</p></div>
+                <Button variant="ghost" size="sm" onClick={() => navigate({ to: "/metas" })} aria-label="Abrir metas" className="rounded-full"><ChevronRight className="h-4 w-4" /></Button>
+              </div>
+              {goalPreview.length ? (
+                <div className="space-y-5">
+                  {goalPreview.map((goal) => {
+                    const current = Number(goal.current || 0), target = Number(goal.target || 0);
+                    const pct = target > 0 ? Math.min(100, Math.max(0, Math.round(current / target * 100))) : 0;
+                    return <div key={goal.id} className="space-y-2">
+                      <div className="flex items-center gap-2"><Target className="h-4 w-4 text-primary" /><span className="min-w-0 flex-1 truncate text-sm font-semibold">{goal.title}</span><span className="text-xs font-extrabold tabular-nums">{pct}%</span></div>
+                      <Progress value={pct} className="h-1.5 bg-secondary [&>div]:bg-primary" />
+                      <p className="text-[11px] text-muted-foreground">{format(current)} de {format(target)}</p>
+                    </div>;
+                  })}
+                </div>
+              ) : <p className="py-7 text-center text-sm text-muted-foreground">Suas metas vão aparecer aqui.</p>}
+            </CardContent>
+          </Card>
 
-        <section>
-          <div className="mb-3 flex items-center justify-between"><div><h3 className="font-semibold">Últimas movimentações</h3><p className="text-xs text-muted-foreground">Atividade recente da sua conta</p></div><Button variant="ghost" size="sm" onClick={() => navigate({ to: "/movimentacoes" })}>Ver todas <ChevronRight className="ml-1 h-4 w-4" /></Button></div>
-          <Card className="border-border/80 shadow-none"><CardContent className="divide-y divide-border p-0">
-            {summary.recent.length ? summary.recent.map(item => <div key={item.id} className="flex items-center gap-3 px-4 py-3.5">
-              <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-full ${item.type === "receita" ? "bg-[#0D9B72]/10 text-[#0D9B72]" : "bg-[#E15B64]/10 text-[#E15B64]"}`}>{item.type === "receita" ? <ArrowDownLeft className="h-4 w-4" /> : <ArrowUpRight className="h-4 w-4" />}</span>
-              <span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium">{item.description}</span><span className="block truncate text-xs text-muted-foreground">{item.category} · {parseLocalDate(item.date).toLocaleDateString("pt-BR")}</span></span>
-              <span className={`shrink-0 text-sm font-semibold ${item.type === "receita" ? "text-[#0D9B72]" : "text-foreground"}`}>{item.type === "receita" ? "+" : "−"}{format(Number(item.amount))}</span>
-            </div>) : <p className="p-8 text-center text-sm text-muted-foreground">Nenhuma movimentação cadastrada ainda.</p>}
-          </CardContent></Card>
+          <Card className="app-section-card">
+            <CardContent className="p-5 sm:p-6">
+              <div className="mb-5 flex items-start justify-between gap-3">
+                <div><p className="section-eyebrow">CRÉDITO</p><h3 className="section-title mt-2">Seus cartões</h3><p className="mt-1 text-xs text-muted-foreground">Faturas do período atual</p></div>
+                <Button variant="ghost" size="sm" onClick={() => navigate({ to: "/cartoes" })} aria-label="Abrir cartões" className="rounded-full"><ChevronRight className="h-4 w-4" /></Button>
+              </div>
+              {cardPreview.length ? (
+                <div className="space-y-2">
+                  {cardPreview.map(card => (
+                    <button type="button" key={card.id} onClick={() => navigate({ to: "/cartoes" })} className="flex w-full items-center gap-3 rounded-2xl border border-border bg-background/40 p-3.5 text-left transition-colors hover:border-primary/50">
+                      <span className="icon-tile"><CreditCard className="h-4 w-4" /></span>
+                      <span className="min-w-0 flex-1"><span className="block truncate text-sm font-bold">{card.name}</span><span className="block text-xs text-muted-foreground">Vence dia {card.due_day}</span></span>
+                      <span className="shrink-0 text-right"><span className="block text-[10px] text-muted-foreground">Fatura</span><span className="block text-sm font-extrabold tabular-nums">{format(card.total)}</span></span>
+                    </button>
+                  ))}
+                </div>
+              ) : <p className="py-7 text-center text-sm text-muted-foreground">Cadastre cartões para acompanhar as faturas.</p>}
+            </CardContent>
+          </Card>
         </section>
-
-        <Button onClick={() => navigate({ to: "/movimentacoes" })} className="hidden rounded-full md:inline-flex"><Plus className="mr-2 h-4 w-4" /> Nova movimentação</Button>
       </main>
       <NewMovementFab />
     </div>

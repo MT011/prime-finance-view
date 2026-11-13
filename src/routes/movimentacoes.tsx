@@ -35,6 +35,8 @@ import {
 import { useValueVisibility } from "@/lib/value-visibility";
 import {
   ArrowLeft,
+  ArrowDownLeft,
+  ArrowUpRight,
   ChevronLeft,
   ChevronRight,
   CreditCard,
@@ -71,7 +73,7 @@ export const Route = createFileRoute("/movimentacoes")({
   }),
   head: () => ({
     meta: [
-      { title: "Movimentações — Finance Dashboard" },
+      { title: "Movimentações — Prime Finance" },
       { name: "description", content: "Todas as suas movimentações financeiras filtráveis." },
     ],
   }),
@@ -109,7 +111,37 @@ function renderMovementTable(
   const allSelected = data.length > 0 && allIds.every((id) => selectedIds?.has(id));
 
   return (
-    <Table>
+    <>
+      <div className="space-y-3 md:hidden">
+        {selectionMode && data.length > 0 && <button type="button" onClick={() => onToggleAll?.(allIds)} className="pill-link mb-1 text-xs">{allSelected ? "Desmarcar todos" : "Selecionar todos desta página"}</button>}
+        {data.length === 0 && <p className="rounded-2xl border border-border bg-card p-8 text-center text-sm text-muted-foreground">Nenhuma movimentação encontrada.</p>}
+        {data.map((m) => (
+          <div key={m.id} className={`rounded-[20px] border border-border bg-card p-4 ${selectedIds?.has(m.id) ? "ring-1 ring-primary" : ""}`}>
+            <div className="flex items-start gap-3">
+              {selectionMode && <button type="button" aria-label={selectedIds?.has(m.id) ? "Desmarcar lançamento" : "Selecionar lançamento"} aria-pressed={selectedIds?.has(m.id) || false} onClick={() => onToggleSelect?.(m.id)} className="mt-2 rounded-md p-1 text-primary">{selectedIds?.has(m.id) ? <SquareCheck className="h-5 w-5" /> : <Square className="h-5 w-5" />}</button>}
+              <span className="icon-tile h-10 w-10 rounded-xl">{m.type === "receita" ? <ArrowDownLeft className="h-4 w-4 text-success" /> : <ArrowUpRight className="h-4 w-4 text-destructive" />}</span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-bold">{m.description || (m.type === "receita" ? "Receita" : "Despesa")}</p>
+                <p className="mt-1 truncate text-xs text-muted-foreground">{m.category} · {parseLocalDate(m.date).toLocaleDateString("pt-BR")}</p>
+              </div>
+              <p className={`max-w-[42%] shrink-0 break-all text-right text-sm font-extrabold tabular-nums ${m.type === "receita" ? "text-success" : "text-foreground"}`}>{m.type === "receita" ? "+" : "−"}{format(m.amount)}</p>
+            </div>
+            <div className="mt-3 flex items-center justify-between gap-2 border-t border-border/70 pt-3">
+              <div className="min-w-0 text-[11px] text-muted-foreground">
+                <span className="font-semibold text-foreground">{m.type === "receita" ? "Receita" : m.nature === "credito" ? "Crédito" : m.nature === "debito" ? "Débito" : m.nature === "pix" ? "PIX" : "Despesa"}</span>
+                {m.account && <span className="ml-2">· {m.account}</span>}
+                {m.total_installments > 1 && <span className="ml-2">· {m.installment_number}/{m.total_installments} parcelas</span>}
+              </div>
+              {!selectionMode && <div className="flex shrink-0 gap-1">
+                <Button variant="ghost" size="icon" aria-label={`Editar lançamento ${m.description || ""}`} className="h-9 w-9 rounded-full" onClick={() => onEdit(m)}><Pencil className="h-4 w-4" /></Button>
+                <Button variant="ghost" size="icon" aria-label={`Excluir lançamento ${m.description || ""}`} className="h-9 w-9 rounded-full text-destructive" onClick={() => onDelete(m)}><Trash2 className="h-4 w-4" /></Button>
+              </div>}
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="hidden md:block">
+        <Table>
       <TableHeader>
         <TableRow>
           {selectionMode && (
@@ -243,7 +275,9 @@ function renderMovementTable(
           </TableRow>
         ))}
       </TableBody>
-    </Table>
+        </Table>
+      </div>
+    </>
   );
 }
 
@@ -544,7 +578,7 @@ function MovimentacoesPage() {
   return (
     <div className="flex min-h-screen flex-col">
       <AppHeader title="Movimentações" subtitle="Todas as entradas e saídas" />
-      <main className="flex-1 space-y-6 p-4 md:p-8">
+      <main className="app-page flex-1 space-y-6">
         {selectedCard ? (
           <>
             {/* Card Detail Header */}

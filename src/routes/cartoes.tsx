@@ -38,7 +38,7 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/cartoes")({
   head: () => ({
     meta: [
-      { title: "Cartões — Finance Dashboard" },
+      { title: "Cartões — Prime Finance" },
       { name: "description", content: "Gerencie seus cartões de crédito e suas faturas." },
     ],
   }),
@@ -200,7 +200,7 @@ function CartoesPage() {
   return (
     <div className="flex min-h-screen flex-col">
       <AppHeader title="Cartões" subtitle="Controle de crédito e faturas" />
-      <main className="flex-1 space-y-6 p-4 md:p-8">
+      <main className="app-page flex-1 space-y-6">
         <Card className="glass-card">
           <CardHeader>
             <CardTitle className="text-base">Adicionar cartão</CardTitle>

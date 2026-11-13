@@ -98,7 +98,7 @@ function getGoalDisplayTitle(goal: any) {
 export const Route = createFileRoute("/metas")({
   head: () => ({
     meta: [
-      { title: "Metas — Finance Dashboard" },
+      { title: "Metas — Prime Finance" },
       { name: "description", content: "Acompanhe suas metas financeiras mensais e anuais." },
     ],
   }),
@@ -302,7 +302,7 @@ function MetasPage() {
   return (
     <div className="flex min-h-screen flex-col">
       <AppHeader title="Metas" subtitle="Objetivos financeiros de curto e longo prazo" />
-      <main className="flex-1 p-4 md:p-8">
+      <main className="app-page flex-1">
         <div className="mb-6 flex flex-col gap-3 rounded-2xl border border-border/60 bg-background/70 p-4 shadow-sm md:flex-row md:items-end md:justify-between">
           <div>
             <p className="text-sm font-medium text-primary">Planejamento financeiro</p>

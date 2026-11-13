@@ -25,7 +25,7 @@ import { ArrowUpRight, TrendingDown, TrendingUp } from "lucide-react";
 export const Route = createFileRoute("/relatorios")({
   head: () => ({
     meta: [
-      { title: "Relatórios — Finance Dashboard" },
+      { title: "Relatórios — Prime Finance" },
       { name: "description", content: "Relatórios visuais das suas finanças." },
     ],
   }),
@@ -87,18 +87,7 @@ function RelatoriosPage() {
       }
     });
 
-    const colorPalette = [
-      "oklch(0.78 0.17 150)",
-      "oklch(0.72 0.13 240)",
-      "oklch(0.82 0.16 80)",
-      "oklch(0.65 0.22 25)",
-      "oklch(0.7 0.18 300)",
-      "oklch(0.85 0.14 40)",
-      "oklch(0.6 0.15 200)",
-      "oklch(0.75 0.14 120)",
-      "oklch(0.68 0.16 170)",
-      "oklch(0.5 0.02 260)",
-    ];
+    const colorPalette = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)", "var(--chart-5)"];
 
     return Object.entries(catMap).map(([name, value], i) => ({
       name,
@@ -137,7 +126,7 @@ function RelatoriosPage() {
   return (
     <div className="flex min-h-screen flex-col">
       <AppHeader title="Relatórios" subtitle="Análise visual das suas finanças" />
-      <main className="flex-1 space-y-6 p-4 md:p-8">
+      <main className="app-page flex-1 space-y-6">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <Card className="glass-card card-hover">
             <CardHeader className="flex flex-row items-center justify-between">
@@ -173,22 +162,22 @@ function RelatoriosPage() {
           <CardContent className="h-80">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={monthlyEvolution} margin={{ left: -10, right: 8, top: 8 }}>
-                <CartesianGrid strokeDasharray="3 6" stroke="oklch(0.3 0.012 260 / 40%)" vertical={false} />
-                <XAxis dataKey="month" stroke="oklch(0.6 0.02 260)" fontSize={11} tickLine={false} axisLine={false} />
-                <YAxis stroke="oklch(0.6 0.02 260)" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `${v / 1000}k`} />
+                <CartesianGrid strokeDasharray="3 6" stroke="var(--border)" vertical={false} />
+                <XAxis dataKey="month" stroke="var(--muted-foreground)" fontSize={11} tickLine={false} axisLine={false} />
+                <YAxis stroke="var(--muted-foreground)" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `${v / 1000}k`} />
                 <Tooltip
                   cursor={{ fill: "oklch(0.3 0.012 260 / 20%)" }}
                   contentStyle={{
-                    background: "oklch(0.205 0.012 260)",
-                    border: "1px solid oklch(0.28 0.012 260)",
+                    background: "var(--popover)",
+                    border: "1px solid var(--border)",
                     borderRadius: 8,
                     fontSize: 12,
                   }}
                   formatter={(v: number) => format(v)}
                 />
                 <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />
-                <Bar dataKey="receitas" name="Receitas" fill="oklch(0.78 0.17 150)" radius={[6, 6, 0, 0]} />
-                <Bar dataKey="despesas" name="Despesas" fill="oklch(0.65 0.22 25)" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="receitas" name="Receitas" fill="var(--success)" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="despesas" name="Despesas" fill="var(--destructive)" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
@@ -209,8 +198,8 @@ function RelatoriosPage() {
                   <PieChart>
                     <Tooltip
                       contentStyle={{
-                        background: "oklch(0.205 0.012 260)",
-                        border: "1px solid oklch(0.28 0.012 260)",
+                        background: "var(--popover)",
+                        border: "1px solid var(--border)",
                         borderRadius: 8,
                         fontSize: 12,
                       }}

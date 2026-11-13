@@ -1,29 +1,11 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
-  LayoutDashboard,
-  ArrowLeftRight,
-  Tags,
-  Target,
-  CreditCard,
-  BarChart3,
-  Settings,
-  User,
-  Wallet,
-  LogOut,
-  Menu,
-
+  LayoutDashboard, ArrowLeftRight, Tags, Target, CreditCard, BarChart3,
+  Settings, User, LogOut, Menu, ArrowUpRight, CircleDot,
 } from "lucide-react";
 import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
+  Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent,
+  SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -31,14 +13,28 @@ import { supabase } from "@/lib/supabase";
 import { useEffect, useState } from "react";
 
 const items = [
-  { title: "Dashboard", url: "/", icon: LayoutDashboard },
+  { title: "Visão geral", url: "/", icon: LayoutDashboard },
   { title: "Movimentações", url: "/movimentacoes", icon: ArrowLeftRight },
   { title: "Categorias", url: "/categorias", icon: Tags },
-  { title: "Metas", url: "/metas", icon: Target },
   { title: "Cartões", url: "/cartoes", icon: CreditCard },
+  { title: "Metas", url: "/metas", icon: Target },
   { title: "Relatórios", url: "/relatorios", icon: BarChart3 },
+];
+const preferences = [
   { title: "Configurações", url: "/configuracoes", icon: Settings },
   { title: "Perfil", url: "/perfil", icon: User },
+];
+const mobileItems = [
+  { title: "Início", url: "/", icon: LayoutDashboard },
+  { title: "Lançamentos", url: "/movimentacoes", icon: ArrowLeftRight },
+  { title: "Cartões", url: "/cartoes", icon: CreditCard },
+  { title: "Categorias", url: "/categorias", icon: Tags },
+];
+const moreItems = [
+  { title: "Metas", subtitle: "Planeje seus objetivos", url: "/metas", icon: Target },
+  { title: "Relatórios", subtitle: "Entenda seus números", url: "/relatorios", icon: BarChart3 },
+  { title: "Configurações", subtitle: "Personalize o app", url: "/configuracoes", icon: Settings },
+  { title: "Perfil", subtitle: "Sua conta", url: "/perfil", icon: User },
 ];
 
 export function AppSidebar() {
@@ -47,14 +43,8 @@ export function AppSidebar() {
   const [moreOpen, setMoreOpen] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setUser(user);
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user || null);
-    });
-
+    supabase.auth.getUser().then(({ data: { user } }) => setUser(user));
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => setUser(session?.user || null));
     return () => subscription.unsubscribe();
   }, []);
 
@@ -62,125 +52,105 @@ export function AppSidebar() {
     await supabase.auth.signOut();
     window.location.reload();
   };
-
+  const isActive = (url: string) => url === "/" ? pathname === "/" : pathname === url || pathname.startsWith(url + "/");
   const name = user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Usuário";
-  const email = user?.email || "";
   const initial = name.charAt(0).toUpperCase();
+
+  const renderMenu = (menu: typeof items) => menu.map((item) => {
+    const active = isActive(item.url);
+    return (
+      <SidebarMenuItem key={item.url}>
+        <SidebarMenuButton
+          asChild
+          isActive={active}
+          tooltip={item.title}
+          className={`h-11 rounded-xl px-3 text-sm font-semibold transition-colors ${active ? "nav-active" : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"}`}
+        >
+          <Link to={item.url} aria-current={active ? "page" : undefined}>
+            <item.icon className="mr-1 h-4.5 w-4.5" strokeWidth={active ? 2.4 : 1.8} />
+            <span>{item.title}</span>
+            {active && <CircleDot className="ml-auto h-3 w-3 opacity-50 group-data-[collapsible=icon]:hidden" />}
+          </Link>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+    );
+  });
 
   return (
     <>
-    <Sidebar collapsible="icon" className="hidden border-r border-sidebar-border md:flex">
-      <SidebarHeader className="border-b border-sidebar-border">
-        <div className="flex items-center gap-3 px-2 py-3">
-          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-primary to-primary/60 shadow-lg shadow-primary/30">
-            <Wallet className="h-5 w-5 text-primary-foreground" />
-          </div>
-          <div className="flex min-w-0 flex-col group-data-[collapsible=icon]:hidden">
-            <span className="truncate text-sm font-semibold text-sidebar-foreground">
-              Finance
-            </span>
-            <span className="truncate text-xs text-muted-foreground">Finanças pessoais</span>
-          </div>
-        </div>
-      </SidebarHeader>
-
-      <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>Navegação</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {items.map((item) => {
-                const active =
-                  item.url === "/"
-                    ? pathname === "/"
-                    : pathname === item.url || pathname.startsWith(item.url + "/");
-                return (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={active}
-                      tooltip={item.title}
-                      className="data-[active=true]:bg-gradient-to-r data-[active=true]:from-primary/20 data-[active=true]:to-transparent data-[active=true]:text-primary data-[active=true]:border-l-2 data-[active=true]:border-primary rounded-lg transition-all"
-                    >
-                      <Link to={item.url}>
-                        <item.icon className="h-4 w-4" />
-                        <span>{item.title}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      </SidebarContent>
-
-      <SidebarFooter className="border-t border-sidebar-border">
-        <div className="flex items-center justify-between gap-2 px-2 py-2 min-w-0">
-          <div className="flex items-center gap-3 min-w-0">
-            <Avatar className="h-9 w-9 shrink-0 ring-2 ring-primary/30">
-              <AvatarFallback className="bg-gradient-to-br from-primary/40 to-primary/10 text-primary-foreground font-semibold">
-                {initial}
-              </AvatarFallback>
-            </Avatar>
-            <div className="flex min-w-0 flex-col group-data-[collapsible=icon]:hidden">
-              <span className="truncate text-sm font-medium">{name}</span>
-              <span className="truncate text-xs text-muted-foreground">{email}</span>
+      <Sidebar collapsible="icon" className="hidden border-r border-sidebar-border bg-sidebar md:flex">
+        <SidebarHeader className="border-b border-sidebar-border px-3 py-5">
+          <div className="flex items-center gap-3 px-1.5">
+            <div className="grid h-10 w-10 shrink-0 place-items-center rounded-[14px] bg-[#ece5d9] text-[#27221e]">
+              <span className="display-font text-[26px] font-black leading-none">f<span className="text-[#c95338]">.</span></span>
+            </div>
+            <div className="min-w-0 group-data-[collapsible=icon]:hidden">
+              <span className="display-font block truncate text-[19px] font-extrabold leading-none tracking-tight">prime<span className="font-medium opacity-65">finance</span></span>
+              <span className="mt-1 block text-[10px] font-medium uppercase tracking-[.14em] text-muted-foreground">Sua vida financeira</span>
             </div>
           </div>
-          <button
-            onClick={handleLogout}
-            className="text-muted-foreground hover:text-destructive transition-colors p-1.5 rounded-lg hover:bg-destructive/10 group-data-[collapsible=icon]:hidden"
-            title="Sair"
-          >
-            <LogOut className="h-4 w-4" />
-          </button>
-        </div>
-      </SidebarFooter>
-    </Sidebar>
-    <nav aria-label="Navegação principal" className="fixed inset-x-0 bottom-0 z-50 grid grid-cols-5 border-t border-border/80 bg-background/95 px-1 pb-[max(env(safe-area-inset-bottom),8px)] pt-2 shadow-[0_-8px_30px_rgba(0,0,0,0.22)] backdrop-blur-xl md:hidden">
-      {[
-        { title: "Início", url: "/", icon: LayoutDashboard },
-        { title: "Lançamentos", url: "/movimentacoes", icon: ArrowLeftRight },
-        { title: "Cartões", url: "/cartoes", icon: CreditCard },
-        { title: "Categorias", url: "/categorias", icon: Tags },
-      ].map((item) => {
-        const active = item.url === "/" ? pathname === "/" : pathname === item.url || pathname.startsWith(item.url + "/");
-        return (
-          <Link key={item.title} to={item.url} className={`flex min-w-0 flex-col items-center gap-1 rounded-xl px-1 py-1.5 text-[10px] font-medium transition-colors ${active ? "text-primary" : "text-muted-foreground"}`}>
-            <item.icon className={`h-5 w-5 ${active ? "stroke-[2.5]" : ""}`} />
-            <span>{item.title}</span>
-          </Link>
-        );
-      })}
-      <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
-        <SheetTrigger asChild>
-          <button type="button" aria-label="Abrir mais opções" aria-expanded={moreOpen} className={`flex min-w-0 flex-col items-center gap-1 rounded-xl px-1 py-1.5 text-[10px] font-medium transition-colors ${moreOpen || ["/metas", "/relatorios", "/configuracoes", "/perfil"].includes(pathname) ? "text-primary" : "text-muted-foreground"}`}>
-            <Menu className="h-5 w-5" />
-            <span>Mais</span>
-          </button>
-        </SheetTrigger>
-        <SheetContent side="bottom" className="rounded-t-3xl border-border bg-background px-5 pb-[max(env(safe-area-inset-bottom),24px)] pt-5">
-          <SheetHeader className="mb-5 text-left">
-            <SheetTitle className="text-xl font-bold">Mais opções</SheetTitle>
-            <p className="text-sm text-muted-foreground">Organize e personalize suas finanças.</p>
-          </SheetHeader>
-          <div className="grid grid-cols-2 gap-3">
-            {[
-              { title: "Metas", subtitle: "Seus objetivos", url: "/metas", icon: Target },
-              { title: "Relatórios", subtitle: "Analisar gastos", url: "/relatorios", icon: BarChart3 },
-              { title: "Configurações", subtitle: "Preferências", url: "/configuracoes", icon: Settings },
-              { title: "Perfil", subtitle: "Minha conta", url: "/perfil", icon: User },
-            ].map((item) => (
-              <Link key={item.url} to={item.url} onClick={() => setMoreOpen(false)} className="flex min-h-24 flex-col justify-between rounded-2xl border border-border/80 bg-card p-4 transition-colors hover:border-primary/40 hover:bg-accent/40">
-                <item.icon className="h-5 w-5 text-primary" />
-                <div><span className="block text-sm font-semibold">{item.title}</span><span className="text-xs text-muted-foreground">{item.subtitle}</span></div>
-              </Link>
-            ))}
+        </SidebarHeader>
+
+        <SidebarContent className="px-2 pt-5">
+          <SidebarGroup>
+            <SidebarGroupLabel className="mb-2 px-3 text-[10px] font-extrabold uppercase tracking-[.16em] text-muted-foreground">Seu espaço</SidebarGroupLabel>
+            <SidebarGroupContent><SidebarMenu className="gap-1">{renderMenu(items)}</SidebarMenu></SidebarGroupContent>
+          </SidebarGroup>
+          <SidebarGroup className="mt-6">
+            <SidebarGroupLabel className="mb-2 px-3 text-[10px] font-extrabold uppercase tracking-[.16em] text-muted-foreground">Conta</SidebarGroupLabel>
+            <SidebarGroupContent><SidebarMenu className="gap-1">{renderMenu(preferences)}</SidebarMenu></SidebarGroupContent>
+          </SidebarGroup>
+        </SidebarContent>
+
+        <SidebarFooter className="border-t border-sidebar-border p-3">
+          <div className="flex min-w-0 items-center gap-2.5 rounded-xl p-2">
+            <Avatar className="h-10 w-10 shrink-0 border border-sidebar-border">
+              <AvatarFallback className="bg-sidebar-accent text-sm font-bold text-sidebar-foreground">{initial}</AvatarFallback>
+            </Avatar>
+            <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
+              <span className="block truncate text-sm font-bold">{name}</span>
+              <span className="block truncate text-[11px] text-muted-foreground">{user?.email || ""}</span>
+            </div>
+            <button type="button" onClick={handleLogout} aria-label="Sair da conta" title="Sair" className="rounded-lg p-2 text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive group-data-[collapsible=icon]:hidden">
+              <LogOut className="h-4 w-4" />
+            </button>
           </div>
-        </SheetContent>
-      </Sheet>
-    </nav>
+        </SidebarFooter>
+      </Sidebar>
+
+      <nav aria-label="Navegação principal" className="fixed inset-x-0 bottom-0 z-50 grid grid-cols-5 border-t border-border bg-background/95 px-2 pb-[max(env(safe-area-inset-bottom),8px)] pt-2 shadow-[0_-8px_22px_rgba(0,0,0,.08)] backdrop-blur-xl md:hidden">
+        {mobileItems.map((item) => {
+          const active = isActive(item.url);
+          return (
+            <Link key={item.url} to={item.url} aria-current={active ? "page" : undefined} className={`flex min-w-0 flex-col items-center gap-1 rounded-xl pb-1 text-[10px] font-semibold ${active ? "mobile-active" : "text-muted-foreground"}`}>
+              <span className="mobile-icon"><item.icon className="h-[18px] w-[18px]" strokeWidth={active ? 2.4 : 1.9} /></span>
+              <span className="max-w-full truncate">{item.title}</span>
+            </Link>
+          );
+        })}
+        <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
+          <SheetTrigger asChild>
+            <button type="button" aria-label="Abrir mais opções" aria-expanded={moreOpen} className={`flex min-w-0 flex-col items-center gap-1 rounded-xl pb-1 text-[10px] font-semibold ${moreOpen || moreItems.some((item) => isActive(item.url)) ? "mobile-active" : "text-muted-foreground"}`}>
+              <span className="mobile-icon"><Menu className="h-[18px] w-[18px]" /></span>
+              <span>Mais</span>
+            </button>
+          </SheetTrigger>
+          <SheetContent side="bottom" className="rounded-t-[28px] border-border bg-card px-5 pb-[max(env(safe-area-inset-bottom),28px)] pt-6">
+            <SheetHeader className="mb-6 text-left">
+              <p className="section-eyebrow">Navegação</p>
+              <SheetTitle className="display-font text-2xl font-extrabold tracking-tight">Tudo em um só lugar.</SheetTitle>
+            </SheetHeader>
+            <div className="grid grid-cols-2 gap-3">
+              {moreItems.map((item) => (
+                <Link key={item.url} to={item.url} onClick={() => setMoreOpen(false)} className="flex min-h-[120px] flex-col justify-between rounded-2xl border border-border bg-background p-4 transition hover:border-primary/60">
+                  <span className="flex items-center justify-between"><item.icon className="h-5 w-5 text-primary" /><ArrowUpRight className="h-3.5 w-3.5 text-muted-foreground" /></span>
+                  <span><span className="block text-sm font-bold">{item.title}</span><span className="block text-[11px] text-muted-foreground">{item.subtitle}</span></span>
+                </Link>
+              ))}
+            </div>
+          </SheetContent>
+        </Sheet>
+      </nav>
     </>
   );
 }

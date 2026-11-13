@@ -38,7 +38,7 @@ import {
 export const Route = createFileRoute("/categorias")({
   head: () => ({
     meta: [
-      { title: "Categorias — Finance Dashboard" },
+      { title: "Categorias — Prime Finance" },
       { name: "description", content: "Gerencie suas categorias de receitas e despesas." },
     ],
   }),
@@ -67,7 +67,7 @@ function CategoriaList({
   onBudgetRemove?: (category: string) => void;
 }) {
   const badgeCls =
-    color === "success" ? "bg-primary/15 text-primary" : "bg-destructive/15 text-destructive";
+    color === "success" ? "bg-success/15 text-success" : "bg-destructive/15 text-destructive";
   const [editingBudget, setEditingBudget] = useState<string | null>(null);
   const [budgetValue, setBudgetValue] = useState("");
 
@@ -92,17 +92,18 @@ function CategoriaList({
   };
 
   return (
-    <Card className="glass-card">
+    <Card className="glass-card app-section-card">
       <CardHeader className="flex flex-row items-center justify-between">
         <div className="flex items-center gap-2">
           <span className={`grid h-8 w-8 place-items-center rounded-lg ${badgeCls}`}>{icon}</span>
-          <CardTitle className="text-base">{title}</CardTitle>
+          <CardTitle className={`text-base ${color === "success" ? "text-success" : ""}`}>{title}</CardTitle>
         </div>
-        <Button size="sm" variant="outline" className="gap-1" onClick={onAdd}>
+        <Button size="sm" variant="outline" className={`gap-1 ${color === "success" ? "border-success/40 text-success hover:bg-success/10 hover:text-success" : ""}`} onClick={onAdd}>
           <Plus className="h-4 w-4" /> Adicionar
         </Button>
       </CardHeader>
       <CardContent className="space-y-2">
+        {items.length === 0 && <p className="py-8 text-center text-sm text-muted-foreground">Nenhuma categoria cadastrada. Toque em Adicionar para começar.</p>}
         {items.map((c) => {
           const hasBudget = budgets?.[c] !== undefined;
           return (
@@ -286,7 +287,7 @@ function CategoriasPage() {
   return (
     <div className="flex min-h-screen flex-col">
       <AppHeader title="Categorias" subtitle="Organize suas receitas e despesas" />
-      <main className="flex-1 space-y-6 p-4 md:p-8">
+      <main className="app-page flex-1 space-y-6">
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <CategoriaList
             title="Receitas"
@@ -319,7 +320,7 @@ function CategoriasPage() {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Nova categoria</DialogTitle>
+            <DialogTitle className={type === "receita" ? "text-success" : ""}>Nova categoria</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
@@ -341,7 +342,7 @@ function CategoriasPage() {
             <Button variant="outline" onClick={() => setOpen(false)} disabled={saving}>
               Cancelar
             </Button>
-            <Button onClick={handleAdd} disabled={saving}>
+            <Button onClick={handleAdd} disabled={saving} className={type === "receita" ? "bg-success text-success-foreground hover:bg-success/90" : ""}>
               {saving ? "Salvando..." : "Salvar"}
             </Button>
           </DialogFooter>
