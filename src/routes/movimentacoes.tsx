@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AppHeader } from "@/components/app-header";
 import { NewMovementFab } from "@/components/new-movement-fab";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
