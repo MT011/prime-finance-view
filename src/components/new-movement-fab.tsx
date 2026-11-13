@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Loader2 } from "lucide-react";
+import { Plus, Loader2, ArrowDownLeft, ArrowUpRight, Info, CalendarDays } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCreditCards, useAddMovement } from "@/hooks/queries";
 import { getCreditCardInvoiceInfo, getInstallmentInvoiceInfos, parseLocalDate } from "@/lib/credit-cards";
@@ -28,6 +28,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { useCategories } from "@/hooks/queries";
 import { toast } from "sonner";
 
+function parseCurrencyInput(value: string): number {
+  const trimmed = value.trim().replace(/R\$/gi, "").replace(/\s/g, "");
+  const normalized = trimmed.includes(",") ? trimmed.replace(/\./g, "").replace(",", ".") : trimmed;
+  return Number(normalized);
+}
+
 export function NewMovementFab() {
   const [open, setOpen] = useState(false);
   const [type, setType] = useState<"receita" | "despesa">("despesa");
@@ -51,8 +57,15 @@ export function NewMovementFab() {
     .filter((c) => c.type === type)
     .map((c) => c.name);
 
+  const amountNumber = parseCurrencyInput(amount);
+  const selectedCardPreview = creditCards.find((card) => card.id === cardId);
+  const invoicePreview = type === "despesa" && nature === "credito" && selectedCardPreview && date
+    ? getCreditCardInvoiceInfo(date, selectedCardPreview)
+    : null;
+  const installmentCount = parseInt(installments, 10) || 1;
+
   const handleSave = async () => {
-    const numAmount = parseFloat(amount.replace(",", "."));
+    const numAmount = amountNumber;
     if (isNaN(numAmount) || numAmount <= 0) {
       toast.error("Por favor, digite um valor válido maior que zero.");
       return;
@@ -230,18 +243,21 @@ export function NewMovementFab() {
       <DialogTrigger asChild>
         <Button
           size="icon"
-          className="fixed bottom-24 right-5 z-50 h-13 w-13 rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/25 transition-all hover:scale-105 md:bottom-6 md:right-6 md:h-14 md:w-14"
+          className="fixed bottom-24 right-5 z-40 h-14 w-14 rounded-[18px] border-2 border-background bg-primary text-primary-foreground shadow-[0_12px_34px_rgba(0,0,0,.24)] transition-transform hover:-translate-y-1 md:bottom-7 md:right-8 md:h-14 md:w-14"
           aria-label="Nova movimentação"
         >
           <Plus className="h-6 w-6" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="glass-card sm:max-w-md max-h-[85dvh] overflow-y-auto">
+      <DialogContent className="max-h-[91dvh] overflow-y-auto rounded-[28px] border-border bg-card p-0 shadow-2xl sm:max-w-[510px]">
+        <div className="p-5 sm:p-7">
         <DialogHeader>
-          <DialogTitle className="text-lg">Nova Movimentação</DialogTitle>
+          <p className="section-eyebrow">NOVO REGISTRO</p>
+          <DialogTitle className="display-font text-[28px] font-extrabold tracking-tight">Novo lançamento</DialogTitle>
+          <p className="text-sm text-muted-foreground">Organize suas finanças em poucos passos.</p>
         </DialogHeader>
 
-        <div className="space-y-4 py-2">
+        <div className="space-y-5 py-6">
           <Tabs value={type} onValueChange={(v) => {
             setType(v as "receita" | "despesa");
             setCategory("");
@@ -249,26 +265,28 @@ export function NewMovementFab() {
             setExpenseType("");
             setInstallments("1");
           }}>
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid h-11 w-full grid-cols-2 rounded-xl bg-muted p-1">
               <TabsTrigger
                 value="receita"
-                className="data-[state=active]:bg-primary/25 data-[state=active]:text-primary"
+                className="rounded-lg data-[state=active]:bg-card data-[state=active]:text-success data-[state=active]:shadow-sm"
               >
-                Receita
+                <ArrowDownLeft className="mr-1 h-4 w-4" /> Receita
               </TabsTrigger>
               <TabsTrigger
                 value="despesa"
-                className="data-[state=active]:bg-destructive/25 data-[state=active]:text-destructive"
+                className="rounded-lg data-[state=active]:bg-card data-[state=active]:text-destructive data-[state=active]:shadow-sm"
               >
-                Despesa
+                <ArrowUpRight className="mr-1 h-4 w-4" /> Despesa
               </TabsTrigger>
             </TabsList>
           </Tabs>
 
-          <div className="space-y-2">
-            <Label>Valor</Label>
-            <Input 
-              placeholder="R$ 0,00" 
+          <div className="rounded-[20px] border border-border bg-background/60 p-4">
+            <Label className="text-xs font-semibold text-muted-foreground">Valor em reais</Label>
+            <Input
+              aria-label="Valor do lançamento em reais"
+              className="mt-1 h-14 border-0 !bg-transparent px-0 font-[Urbanist] text-[34px] font-extrabold tracking-tight shadow-none placeholder:text-muted-foreground/40 focus-visible:ring-0"
+              placeholder="0,00"
               inputMode="decimal" 
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
@@ -276,7 +294,7 @@ export function NewMovementFab() {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label>Categoria</Label>
               <Select value={category} onValueChange={setCategory} disabled={saving}>
@@ -355,10 +373,8 @@ export function NewMovementFab() {
                   ))}
                 </SelectContent>
               </Select>
-              {cardId && (
-                <p className="text-xs text-muted-foreground">
-                  {getCreditCardInvoiceInfo(date, creditCards.find((card) => card.id === cardId))?.label} · vence {getCreditCardInvoiceInfo(date, creditCards.find((card) => card.id === cardId))?.dueDate}
-                </p>
+              {invoicePreview && (
+                <p className="flex items-center gap-2 rounded-xl bg-muted p-3 text-xs text-muted-foreground"><CalendarDays className="h-4 w-4 shrink-0 text-primary" /> {invoicePreview.label} · vence {invoicePreview.dueDate}</p>
               )}
               {cardId && nature === "credito" && (
                 <div className="space-y-2 pt-2">
@@ -370,7 +386,7 @@ export function NewMovementFab() {
                     <SelectContent>
                       {Array.from({ length: 24 }, (_, i) => i + 1).map((n) => (
                         <SelectItem key={n} value={String(n)}>
-                          {n}x {n > 1 ? `- ${(parseFloat(amount.replace(",", ".")) / n).toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 2 })}` : ""}
+                          {n}x {n > 1 ? `- ${(amountNumber / n).toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 2 })}` : ""}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -378,6 +394,13 @@ export function NewMovementFab() {
                 </div>
               )}
             </div>
+          )}
+
+          {type === "despesa" && expenseType === "fixo" && (
+            <p className="flex items-start gap-2 rounded-xl border border-border bg-muted/50 p-3 text-xs leading-relaxed text-muted-foreground"><Info className="mt-0.5 h-4 w-4 shrink-0 text-primary" /> Despesa fixa: serão criados lançamentos para os próximos 12 meses.</p>
+          )}
+          {type === "despesa" && nature === "credito" && cardId && installmentCount > 1 && amountNumber > 0 && expenseType !== "fixo" && (
+            <p className="rounded-xl border border-border bg-muted/50 p-3 text-xs text-muted-foreground">Compra em {installmentCount} parcelas de aproximadamente {(amountNumber / installmentCount).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}.</p>
           )}
 
           <div className="space-y-2">
@@ -393,7 +416,7 @@ export function NewMovementFab() {
           <div className="space-y-2">
             <Label>Descrição</Label>
             <Textarea 
-              rows={3} 
+              rows={2} 
               placeholder="Descreva a movimentação" 
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -402,20 +425,21 @@ export function NewMovementFab() {
           </div>
         </div>
 
-        <DialogFooter className="gap-2 sm:gap-2">
+        <DialogFooter className="gap-2 border-t border-border pt-5 sm:gap-2">
           <Button variant="outline" onClick={() => setOpen(false)} disabled={saving}>
             Cancelar
           </Button>
-          <Button onClick={handleSave} disabled={saving}>
+          <Button onClick={handleSave} disabled={saving} className="rounded-xl px-5 font-bold">
             {saving ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Salvando
               </>
             ) : (
-              "Salvar"
+              "Salvar lançamento"
             )}
           </Button>
         </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   );
