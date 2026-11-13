@@ -73,7 +73,7 @@ export const Route = createFileRoute("/movimentacoes")({
   }),
   head: () => ({
     meta: [
-      { title: "Movimentações — Finance Dashboard" },
+      { title: "Movimentações — Prime Finance" },
       { name: "description", content: "Todas as suas movimentações financeiras filtráveis." },
     ],
   }),
