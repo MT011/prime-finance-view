@@ -60,7 +60,7 @@ function ConfiguracoesPage() {
   return (
     <div className="flex min-h-screen flex-col">
       <AppHeader title="Configurações" subtitle="Personalize sua experiência" />
-      <main className="flex-1 space-y-6 p-4 md:p-8">
+      <main className="app-page flex-1 space-y-6">
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <Section
             icon={<Palette className="h-4 w-4" />}
