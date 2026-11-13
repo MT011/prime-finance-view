@@ -3,7 +3,7 @@ import { useMemo } from "react";
 import { AppHeader } from "@/components/app-header";
 import { NewMovementFab } from "@/components/new-movement-fab";
 import { useValueVisibility } from "@/lib/value-visibility";
-import { useMovements, useGoals, useCreditCards } from "@/hooks/queries";
+import { useMovements, useGoals, useCreditCards, useCategoryBudgets } from "@/hooks/queries";
 import { parseLocalDate, getCurrentInvoiceMonthKey } from "@/lib/credit-cards";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,7 @@ function DashboardPage() {
   const { data: movements = [], isLoading: loadingMovements } = useMovements();
   const { data: goals = [], isLoading: loadingGoals } = useGoals();
   const { data: cards = [] } = useCreditCards();
+  const { data: categoryBudgets = [], isLoading: loadingBudgets } = useCategoryBudgets();
 
   const summary = useMemo(() => {
     const now = new Date();
@@ -64,6 +65,33 @@ function DashboardPage() {
     return { income, expenses, balance, savings: income-expenses, recent, categories };
   }, [movements]);
 
+  const budgetOverview = useMemo(() => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth();
+    const daysLeft = new Date(year, month + 1, 0).getDate() - now.getDate() + 1;
+    const monthlyExpenses = movements.filter((movement) => {
+      const date = parseLocalDate(movement.date);
+      return movement.type === "despesa" && date.getFullYear() === year && date.getMonth() === month;
+    });
+    // Compras no cartão consomem o orçamento da categoria na data da compra;
+    // isso não representa dinheiro disponível em conta nem saldo de fatura.
+    const categories = categoryBudgets
+      .filter((budget) => Number(budget.monthly_limit) > 0)
+      .map((budget) => {
+        const limit = Number(budget.monthly_limit);
+        const spent = monthlyExpenses
+          .filter((movement) => movement.category === budget.category)
+          .reduce((total, movement) => total + (Number(movement.amount) || 0), 0);
+        return { name: budget.category, limit, spent, remaining: limit - spent, ratio: (spent / limit) * 100 };
+      })
+      .sort((a, b) => b.ratio - a.ratio);
+    const totalLimit = categories.reduce((sum, category) => sum + category.limit, 0);
+    const totalSpent = categories.reduce((sum, category) => sum + category.spent, 0);
+    const remaining = totalLimit - totalSpent;
+    return { categories, totalLimit, totalSpent, remaining, daysLeft, dailyReference: Math.max(0, remaining) / daysLeft };
+  }, [movements, categoryBudgets]);
+
   const goalPreview = goals.slice(0,2);
   const cardPreview = cards.slice(0,2).map(card => {
     const invoiceMonth = getCurrentInvoiceMonthKey(card);
@@ -84,7 +112,7 @@ function DashboardPage() {
   }[status];
   const HealthIcon = health.icon;
 
-  if (loadingMovements || loadingGoals) {
+  if (loadingMovements || loadingGoals || loadingBudgets) {
     return (
       <div className="min-h-screen">
         <AppHeader greeting />
@@ -183,6 +211,75 @@ function DashboardPage() {
               </CardContent>
             </Card>
           </div>
+        </section>
+
+        <section aria-label="Controle de orçamento mensal">
+          <Card className="app-section-card overflow-hidden">
+            <CardContent className="p-5 sm:p-6">
+              <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="section-eyebrow">CENTRAL DE CONTROLE</p>
+                  <h3 className="section-title mt-2">Seu orçamento, sem surpresas</h3>
+                  <p className="mt-1 text-xs text-muted-foreground">Acompanhe seus limites por categoria ao longo do mês.</p>
+                </div>
+                <Button variant="outline" size="sm" className="rounded-full" onClick={() => navigate({ to: "/categorias" })}>
+                  Ajustar limites <ArrowRight className="ml-1 h-3.5 w-3.5" />
+                </Button>
+              </div>
+              {budgetOverview.categories.length ? (
+                <>
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <div className="rounded-2xl border border-border/70 bg-background/50 p-4">
+                      <p className="text-xs text-muted-foreground">Restante nos limites</p>
+                      <p className={`mt-2 break-words text-2xl font-extrabold tabular-nums ${budgetOverview.remaining < 0 ? "text-destructive" : "text-foreground"}`}>{format(budgetOverview.remaining)}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">De {format(budgetOverview.totalLimit)} planejados</p>
+                    </div>
+                    <div className="rounded-2xl border border-border/70 bg-background/50 p-4">
+                      <p className="text-xs text-muted-foreground">Referência diária até o fim do mês</p>
+                      <p className="mt-2 break-words text-2xl font-extrabold tabular-nums">{format(budgetOverview.dailyReference)}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">{budgetOverview.daysLeft} {budgetOverview.daysLeft === 1 ? "dia restante" : "dias restantes"} · apenas categorias com limite</p>
+                    </div>
+                    <div className="rounded-2xl border border-border/70 bg-background/50 p-4">
+                      <p className="text-xs text-muted-foreground">Orçamento utilizado</p>
+                      <p className="mt-2 break-words text-2xl font-extrabold tabular-nums">{format(budgetOverview.totalSpent)}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">{Math.round((budgetOverview.totalSpent / budgetOverview.totalLimit) * 100)}% dos limites definidos</p>
+                    </div>
+                  </div>
+                  <div className="mt-5 grid gap-3 md:grid-cols-2">
+                    {budgetOverview.categories.slice(0, 4).map((category) => (
+                      <div key={category.name} className="rounded-xl border border-border/60 p-3.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="min-w-0 truncate text-sm font-semibold">{category.name}</p>
+                          <span className={`shrink-0 text-xs font-bold ${category.ratio >= 100 ? "text-destructive" : category.ratio >= 80 ? "text-warning" : "text-muted-foreground"}`}>
+                            {Math.round(category.ratio)}%
+                          </span>
+                        </div>
+                        <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted">
+                          <div className={`h-full rounded-full ${category.ratio >= 100 ? "bg-destructive" : category.ratio >= 80 ? "bg-warning" : "bg-success"}`} style={{ width: `${Math.min(100, category.ratio)}%` }} />
+                        </div>
+                        <div className="mt-2 flex justify-between gap-3 text-xs text-muted-foreground">
+                          <span>Gasto: {format(category.spent)}</span>
+                          <span className={category.remaining < 0 ? "font-semibold text-destructive" : ""}>
+                            {category.remaining < 0 ? "Excedeu: " : "Resta: "}{format(Math.abs(category.remaining))}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-4 flex items-start gap-2 rounded-xl bg-muted/50 p-3 text-xs text-muted-foreground">
+                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                    <p>Esta é uma referência baseada somente nas categorias com limite. Não é seu saldo livre para gastar: contas a vencer, faturas e gastos de outras categorias podem comprometer o dinheiro.</p>
+                  </div>
+                </>
+              ) : (
+                <div className="rounded-2xl border border-dashed border-border p-5 sm:p-6">
+                  <p className="font-semibold">Comece definindo limites mensais.</p>
+                  <p className="mt-1 text-sm text-muted-foreground">Por exemplo, quanto pretende gastar com alimentação, transporte ou lazer. Depois você verá aqui quanto ainda resta em cada categoria.</p>
+                  <Button size="sm" className="mt-4 rounded-full" onClick={() => navigate({ to: "/categorias" })}>Definir meu primeiro limite <ArrowRight className="ml-1 h-4 w-4" /></Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </section>
 
         <div className="flex justify-end" aria-label="Acesso ao histórico de movimentações">
