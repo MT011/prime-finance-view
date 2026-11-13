@@ -12,7 +12,7 @@ import { useEffect, useState } from "react";
 export const Route = createFileRoute("/perfil")({
   head: () => ({
     meta: [
-      { title: "Perfil — Finance Dashboard" },
+      { title: "Perfil — Prime Finance" },
       { name: "description", content: "Dados do seu perfil e conta." },
     ],
   }),
