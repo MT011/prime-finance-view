@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Loader2 } from "lucide-react";
+import { Plus, Loader2, ArrowDownRight, ArrowUpRight, CalendarDays, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCreditCards, useAddMovement } from "@/hooks/queries";
 import { getCreditCardInvoiceInfo, getInstallmentInvoiceInfos, parseLocalDate } from "@/lib/credit-cards";
@@ -51,8 +51,15 @@ export function NewMovementFab() {
     .filter((c) => c.type === type)
     .map((c) => c.name);
 
+  const selectedCardPreview = creditCards.find((card) => card.id === cardId);
+  const invoicePreview = type === "despesa" && nature === "credito" && selectedCardPreview && date
+    ? getCreditCardInvoiceInfo(date, selectedCardPreview)
+    : null;
+  const amountPreview = Number(amount.replace(/\./g, "").replace(",", "."));
+  const installmentCount = Number(installments) || 1;
+
   const handleSave = async () => {
-    const numAmount = parseFloat(amount.replace(",", "."));
+    const numAmount = Number(amount.replace(/\./g, "").replace(",", "."));
     if (isNaN(numAmount) || numAmount <= 0) {
       toast.error("Por favor, digite um valor válido maior que zero.");
       return;
@@ -236,12 +243,14 @@ export function NewMovementFab() {
           <Plus className="h-6 w-6" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="glass-card sm:max-w-md max-h-[85dvh] overflow-y-auto">
+      <DialogContent className="glass-card max-h-[90dvh] overflow-y-auto rounded-3xl border-border/70 p-0 sm:max-w-lg">
+        <div className="p-5 sm:p-6">
         <DialogHeader>
-          <DialogTitle className="text-lg">Nova Movimentação</DialogTitle>
+          <DialogTitle className="text-xl font-bold tracking-tight">Novo lançamento</DialogTitle>
+          <p className="text-sm text-muted-foreground">Registre suas finanças de forma simples e organizada.</p>
         </DialogHeader>
 
-        <div className="space-y-4 py-2">
+        <div className="space-y-5 py-5">
           <Tabs value={type} onValueChange={(v) => {
             setType(v as "receita" | "despesa");
             setCategory("");
@@ -265,10 +274,11 @@ export function NewMovementFab() {
             </TabsList>
           </Tabs>
 
-          <div className="space-y-2">
-            <Label>Valor</Label>
-            <Input 
-              placeholder="R$ 0,00" 
+          <div className={`rounded-2xl border p-4 ${type === "despesa" ? "border-rose-500/20 bg-rose-500/[0.05]" : "border-emerald-500/20 bg-emerald-500/[0.05]"}`}>
+            <Label className="flex items-center gap-2">{type === "despesa" ? <ArrowUpRight className="h-4 w-4 text-rose-500" /> : <ArrowDownRight className="h-4 w-4 text-emerald-500" />} Valor</Label>
+            <Input
+              className="mt-2 h-14 border-0 bg-transparent px-0 text-3xl font-bold shadow-none focus-visible:ring-0"
+              placeholder="0,00"
               inputMode="decimal" 
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
@@ -355,10 +365,8 @@ export function NewMovementFab() {
                   ))}
                 </SelectContent>
               </Select>
-              {cardId && (
-                <p className="text-xs text-muted-foreground">
-                  {getCreditCardInvoiceInfo(date, creditCards.find((card) => card.id === cardId))?.label} · vence {getCreditCardInvoiceInfo(date, creditCards.find((card) => card.id === cardId))?.dueDate}
-                </p>
+              {invoicePreview && (
+                <p className="flex items-center gap-2 rounded-xl bg-primary/10 px-3 py-2 text-xs text-primary"><CalendarDays className="h-4 w-4" /> {invoicePreview.label} · vence {invoicePreview.dueDate}</p>
               )}
               {cardId && nature === "credito" && (
                 <div className="space-y-2 pt-2">
@@ -370,7 +378,7 @@ export function NewMovementFab() {
                     <SelectContent>
                       {Array.from({ length: 24 }, (_, i) => i + 1).map((n) => (
                         <SelectItem key={n} value={String(n)}>
-                          {n}x {n > 1 ? `- ${(parseFloat(amount.replace(",", ".")) / n).toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 2 })}` : ""}
+                          {n}x {n > 1 ? `- ${(amountPreview / n).toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 2 })}` : ""}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -379,6 +387,9 @@ export function NewMovementFab() {
               )}
             </div>
           )}
+          {type === "despesa" && expenseType === "fixo" && <p className="flex items-start gap-2 rounded-xl bg-primary/5 p-3 text-xs text-muted-foreground"><Info className="h-4 w-4 shrink-0 text-primary" /> Esta despesa será lançada nos próximos 12 meses.</p>}
+          {type === "despesa" && nature === "credito" && cardId && installmentCount > 1 && amountPreview > 0 && expenseType !== "fixo" && <p className="rounded-xl bg-muted/70 p-3 text-xs text-muted-foreground">{installmentCount} parcelas de aproximadamente {(amountPreview / installmentCount).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}.</p>}
+
 
           <div className="space-y-2">
             <Label>Data</Label>
@@ -393,7 +404,7 @@ export function NewMovementFab() {
           <div className="space-y-2">
             <Label>Descrição</Label>
             <Textarea 
-              rows={3} 
+              rows={2} 
               placeholder="Descreva a movimentação" 
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -402,20 +413,21 @@ export function NewMovementFab() {
           </div>
         </div>
 
-        <DialogFooter className="gap-2 sm:gap-2">
+        <DialogFooter className="gap-2 border-t border-border/70 pt-4 sm:gap-2">
           <Button variant="outline" onClick={() => setOpen(false)} disabled={saving}>
             Cancelar
           </Button>
-          <Button onClick={handleSave} disabled={saving}>
+          <Button onClick={handleSave} disabled={saving} className="min-w-32 rounded-xl">
             {saving ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Salvando
               </>
             ) : (
-              "Salvar"
+              "Salvar lançamento"
             )}
           </Button>
         </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   );
