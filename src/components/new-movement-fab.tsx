@@ -274,10 +274,11 @@ export function NewMovementFab() {
             </TabsList>
           </Tabs>
 
-          <div className="space-y-2">
-            <Label>Valor</Label>
-            <Input 
-              placeholder="R$ 0,00" 
+          <div className={`rounded-2xl border p-4 ${type === "despesa" ? "border-rose-500/20 bg-rose-500/[0.05]" : "border-emerald-500/20 bg-emerald-500/[0.05]"}`}>
+            <Label className="flex items-center gap-2">{type === "despesa" ? <ArrowUpRight className="h-4 w-4 text-rose-500" /> : <ArrowDownRight className="h-4 w-4 text-emerald-500" />} Valor</Label>
+            <Input
+              className="mt-2 h-14 border-0 bg-transparent px-0 text-3xl font-bold shadow-none focus-visible:ring-0"
+              placeholder="0,00"
               inputMode="decimal" 
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
@@ -364,10 +365,8 @@ export function NewMovementFab() {
                   ))}
                 </SelectContent>
               </Select>
-              {cardId && (
-                <p className="text-xs text-muted-foreground">
-                  {getCreditCardInvoiceInfo(date, creditCards.find((card) => card.id === cardId))?.label} · vence {getCreditCardInvoiceInfo(date, creditCards.find((card) => card.id === cardId))?.dueDate}
-                </p>
+              {invoicePreview && (
+                <p className="flex items-center gap-2 rounded-xl bg-primary/10 px-3 py-2 text-xs text-primary"><CalendarDays className="h-4 w-4" /> {invoicePreview.label} · vence {invoicePreview.dueDate}</p>
               )}
               {cardId && nature === "credito" && (
                 <div className="space-y-2 pt-2">
@@ -388,6 +387,9 @@ export function NewMovementFab() {
               )}
             </div>
           )}
+          {type === "despesa" && expenseType === "fixo" && <p className="flex items-start gap-2 rounded-xl bg-primary/5 p-3 text-xs text-muted-foreground"><Info className="h-4 w-4 shrink-0 text-primary" /> Esta despesa será lançada nos próximos 12 meses.</p>}
+          {type === "despesa" && nature === "credito" && cardId && installmentCount > 1 && amountPreview > 0 && expenseType !== "fixo" && <p className="rounded-xl bg-muted/70 p-3 text-xs text-muted-foreground">{installmentCount} parcelas de aproximadamente {(amountPreview / installmentCount).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}.</p>}
+
 
           <div className="space-y-2">
             <Label>Data</Label>
@@ -402,7 +404,7 @@ export function NewMovementFab() {
           <div className="space-y-2">
             <Label>Descrição</Label>
             <Textarea 
-              rows={3} 
+              rows={2} 
               placeholder="Descreva a movimentação" 
               value={description}
               onChange={(e) => setDescription(e.target.value)}
