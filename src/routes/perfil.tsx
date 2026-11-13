@@ -73,7 +73,7 @@ function PerfilPage() {
   return (
     <div className="flex min-h-screen flex-col">
       <AppHeader title="Perfil" subtitle="Suas informações pessoais" />
-      <main className="flex-1 p-4 md:p-8">
+      <main className="app-page flex-1">
         <Card className="glass-card mx-auto max-w-2xl overflow-hidden">
           <div className="h-32 bg-gradient-to-br from-primary/40 via-info/30 to-primary/10" />
           <CardContent className="pt-0">
