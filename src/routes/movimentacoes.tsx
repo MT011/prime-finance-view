@@ -674,7 +674,7 @@ function MovimentacoesPage() {
             </Card>
 
             {/* Card Tabs */}
-            <div className="flex items-center justify-between gap-2">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <Tabs
                 value={cardViewTab}
                 onValueChange={(v) =>
@@ -683,16 +683,16 @@ function MovimentacoesPage() {
                     search: { card: selectedCard.id, tab: v as "atual" | "proxima" | "historico" },
                   })
                 }
-                className="flex-1"
+                className="min-w-0 w-full sm:flex-1"
               >
-                <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="atual">Fatura Atual</TabsTrigger>
-                  <TabsTrigger value="proxima">Próxima Fatura</TabsTrigger>
-                  <TabsTrigger value="historico">Histórico</TabsTrigger>
+                <TabsList className="grid h-auto min-h-10 w-full min-w-0 grid-cols-3 gap-1 p-1">
+                  <TabsTrigger value="atual" className="min-w-0 px-1.5 text-xs whitespace-nowrap sm:px-3 sm:text-sm"><span className="sm:hidden">Atual</span><span className="hidden sm:inline">Fatura Atual</span></TabsTrigger>
+                  <TabsTrigger value="proxima" className="min-w-0 px-1.5 text-xs whitespace-nowrap sm:px-3 sm:text-sm"><span className="sm:hidden">Próxima</span><span className="hidden sm:inline">Próxima Fatura</span></TabsTrigger>
+                  <TabsTrigger value="historico" className="min-w-0 px-1.5 text-xs whitespace-nowrap sm:px-3 sm:text-sm">Histórico</TabsTrigger>
                 </TabsList>
               </Tabs>
               {selectionMode ? (
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center justify-end gap-2">
                   <span className="text-xs text-muted-foreground whitespace-nowrap">
                     {selectedIds.size} selecionado(s)
                   </span>
