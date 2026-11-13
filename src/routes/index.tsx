@@ -48,7 +48,13 @@ function DashboardPage() {
         if (isCurrentOrPast && (item.nature === "debito" || item.nature === "pix")) balance -= amount;
       }
     });
-    const recent = [...movements].sort((a,b) => parseLocalDate(b.date).getTime() - parseLocalDate(a.date).getTime()).slice(0,5);
+    // Últimos registros cadastrados primeiro, independentemente da data da movimentação.
+    const recent = [...movements]
+      .sort((a, b) =>
+        (b.created_at || b.date || "").localeCompare(a.created_at || a.date || "") ||
+        (b.id || "").localeCompare(a.id || ""),
+      )
+      .slice(0, 5);
     const topExpenses = thisMonth.filter(x => x.type === "despesa").reduce((acc, item) => {
       const key = item.category || "Outros";
       acc[key] = (acc[key] || 0) + Number(item.amount || 0);
