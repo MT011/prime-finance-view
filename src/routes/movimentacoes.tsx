@@ -299,7 +299,11 @@ function MovimentacoesPage() {
 
   const { data: movements = [], isLoading } = useMovements();
   const { data: creditCards = [] } = useCreditCards();
-  const accounts = creditCards.map((c) => c.name);
+  // Inclui todas as contas presentes nos lançamentos, inclusive compras no cartão.
+  const accounts = Array.from(new Set([
+    ...creditCards.map((c) => c.name),
+    ...movements.map((m) => m.account).filter(Boolean),
+  ])).sort((a, b) => a.localeCompare(b, "pt-BR"));
   const deleteMovementMutation = useDeleteMovement();
   const bulkDeleteMutation = useBulkDeleteMovements();
 
@@ -545,15 +549,27 @@ function MovimentacoesPage() {
   const allCategories = [...storedCategories.receitas, ...storedCategories.despesas];
 
   const filtered = useMemo(() => {
-    return movements.filter((m) => {
-      if (search && !m.description.toLowerCase().includes(search.toLowerCase())) return false;
-      if (month !== "all" && parseLocalDate(m.date).getMonth() + 1 !== Number(month)) return false;
-      if (cat !== "all" && m.category !== cat) return false;
-      if (acc !== "all" && m.account !== acc) return false;
-      if (type !== "all" && m.type !== type) return false;
-      return true;
-    });
-  }, [movements, search, month, cat, acc, type]);
+    return movements
+      // A lista geral inclui receitas, despesas e compras de cartão.
+      // A fatura é uma outra visão dos mesmos registros, não uma lista exclusiva.
+      .filter((m) => {
+        if (search && !(m.description || "").toLowerCase().includes(search.toLowerCase())) return false;
+        if (month !== "all" && parseLocalDate(m.date).getMonth() + 1 !== Number(month)) return false;
+        if (cat !== "all" && m.category !== cat) return false;
+        if (acc !== "all" && m.account !== acc && !creditCards.some((c) => c.id === m.card_id && c.name === acc)) return false;
+        if (type !== "all" && m.type !== type) return false;
+        return true;
+      })
+      // Lançamentos recém-cadastrados primeiro, mesmo que pertençam a outra fatura.
+      .sort((a, b) =>
+        (b.created_at || "").localeCompare(a.created_at || "") ||
+        (b.date || "").localeCompare(a.date || "") ||
+        (b.id || "").localeCompare(a.id || ""),
+      );
+  }, [movements, search, month, cat, acc, type, creditCards]);
+
+  // Mudança de filtro ou novo registro sempre volta para a primeira página.
+  useEffect(() => setPage(1), [search, month, cat, acc, type, movements]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const pageData = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
