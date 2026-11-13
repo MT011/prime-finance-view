@@ -243,9 +243,11 @@ export function NewMovementFab() {
           <Plus className="h-6 w-6" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="glass-card max-h-[90dvh] overflow-y-auto rounded-3xl border-border/70 p-0 sm:max-w-lg">\n        <div className="p-5 sm:p-6">
+      <DialogContent className="glass-card max-h-[90dvh] overflow-y-auto rounded-3xl border-border/70 p-0 sm:max-w-lg">
+        <div className="p-5 sm:p-6">
         <DialogHeader>
-          <DialogTitle className="text-xl font-bold tracking-tight">Novo lançamento</DialogTitle>\n          <p className="text-sm text-muted-foreground">Registre suas finanças de forma simples e organizada.</p>
+          <DialogTitle className="text-xl font-bold tracking-tight">Novo lançamento</DialogTitle>
+          <p className="text-sm text-muted-foreground">Registre suas finanças de forma simples e organizada.</p>
         </DialogHeader>
 
         <div className="space-y-5 py-5">
@@ -423,7 +425,8 @@ export function NewMovementFab() {
             )}
           </Button>
         </DialogFooter>
-        </div>\n      </DialogContent>
+        </div>
+      </DialogContent>
     </Dialog>
   );
 }
