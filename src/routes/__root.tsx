@@ -133,7 +133,7 @@ function RootShell({ children }: { children: ReactNode }) {
             __html: `
               (function() {
                 try {
-                  var theme = localStorage.getItem("dash-theme") || "light";
+                  var theme = localStorage.getItem("dash-theme") || "dark";
                   document.documentElement.classList.add(theme);
                 } catch(e) {}
               })();
@@ -194,9 +194,9 @@ function RootComponent() {
       <ThemeProvider>
         <ValueVisibilityProvider>
           <SidebarProvider>
-            <div className="flex min-h-screen w-full bg-background">
+            <div className="flex min-h-screen w-full bg-transparent">
               <AppSidebar />
-              <SidebarInset className="min-w-0 flex-1 bg-background pb-20 md:pb-0">
+              <SidebarInset className="min-w-0 flex-1 bg-transparent pb-20 md:pb-0">
                 <Outlet />
               </SidebarInset>
             </div>
