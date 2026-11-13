@@ -96,9 +96,9 @@ function CategoriaList({
       <CardHeader className="flex flex-row items-center justify-between">
         <div className="flex items-center gap-2">
           <span className={`grid h-8 w-8 place-items-center rounded-lg ${badgeCls}`}>{icon}</span>
-          <CardTitle className={`text-base ${color === "success" ? "text-success" : ""}`}>{title}</CardTitle>
+          <CardTitle className="text-base text-foreground">{title}</CardTitle>
         </div>
-        <Button size="sm" variant="outline" className={`gap-1 ${color === "success" ? "border-success/40 text-success hover:bg-success/10 hover:text-success" : ""}`} onClick={onAdd}>
+        <Button size="sm" variant="outline" className={`gap-1 ${color === "success" ? "border-success/40 text-success hover:bg-success/10 hover:text-success" : "border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"}`} onClick={onAdd}>
           <Plus className="h-4 w-4" /> Adicionar
         </Button>
       </CardHeader>
@@ -320,7 +320,7 @@ function CategoriasPage() {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className={type === "receita" ? "text-success" : ""}>Nova categoria</DialogTitle>
+            <DialogTitle className="text-foreground">Nova categoria</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
