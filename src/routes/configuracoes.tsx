@@ -13,7 +13,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useTheme } from "@/lib/theme-provider";
-import { Download, Upload, KeyRound, Bell, Globe, Palette, Coins } from "lucide-react";
+import { Download, Upload, KeyRound, Bell, Globe, Palette, Coins, Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
+import { DEFAULT_NOTIFICATION_PREFERENCES, getNotificationPreferences, type NotificationPreferences } from "@/lib/finance-notifications";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/configuracoes")({
   head: () => ({
@@ -56,6 +60,82 @@ function Section({
 
 function ConfiguracoesPage() {
   const { theme, setTheme } = useTheme();
+  const [preferences, setPreferences] = useState<NotificationPreferences>(DEFAULT_NOTIFICATION_PREFERENCES);
+  const [savingPreference, setSavingPreference] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [savingPassword, setSavingPassword] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) setPreferences(getNotificationPreferences(user.user_metadata));
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) setPreferences(getNotificationPreferences(session.user.user_metadata));
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const savePreference = async (key: keyof NotificationPreferences, enabled: boolean) => {
+    if (savingPreference) return;
+    const previous = preferences;
+    const next = { ...preferences, [key]: enabled };
+    setPreferences(next);
+    setSavingPreference(true);
+    try {
+      const { data: { user }, error: getError } = await supabase.auth.getUser();
+      if (getError || !user) throw getError || new Error("Sessão expirada.");
+      const { error } = await supabase.auth.updateUser({
+        data: { ...user.user_metadata, prime_notification_prefs: next },
+      });
+      if (error) throw error;
+      toast.success("Preferências de notificações atualizadas.");
+    } catch (error) {
+      setPreferences(previous);
+      toast.error(error instanceof Error ? error.message : "Não foi possível salvar as preferências.");
+    } finally {
+      setSavingPreference(false);
+    }
+  };
+
+  const changePassword = async () => {
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      toast.error("Preencha todos os campos da senha.");
+      return;
+    }
+    if (newPassword.length < 8) {
+      toast.error("A nova senha deve ter pelo menos 8 caracteres.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error("A confirmação da senha não confere.");
+      return;
+    }
+    if (newPassword === currentPassword) {
+      toast.error("Escolha uma senha diferente da atual.");
+      return;
+    }
+    setSavingPassword(true);
+    try {
+      const { data: { user }, error: getError } = await supabase.auth.getUser();
+      if (getError || !user?.email) throw getError || new Error("Não foi possível confirmar o usuário.");
+      const { error: authError } = await supabase.auth.signInWithPassword({
+        email: user.email, password: currentPassword,
+      });
+      if (authError) throw new Error("Senha atual incorreta ou não foi possível validá-la.");
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      toast.success("Sua senha foi alterada com sucesso.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível alterar a senha.");
+    } finally {
+      setSavingPassword(false);
+    }
+  };
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -113,20 +193,20 @@ function ConfiguracoesPage() {
           <Section
             icon={<Bell className="h-4 w-4" />}
             title="Notificações"
-            desc="Como você quer ser avisado"
+            desc="Escolha quais informações aparecem no sino do aplicativo"
           >
-            <div className="flex items-center justify-between">
-              <Label>Alertas de gastos</Label>
-              <Switch defaultChecked />
-            </div>
-            <div className="flex items-center justify-between">
-              <Label>Resumo mensal por e-mail</Label>
-              <Switch defaultChecked />
-            </div>
-            <div className="flex items-center justify-between">
-              <Label>Lembretes de metas</Label>
-              <Switch />
-            </div>
+            {([
+              ["budgets", "Avisos dos limites por categoria", "Alerta quando o orçamento atingir 80% ou 100%"],
+              ["cards", "Atenção aos cartões", "Alertas ao se aproximar do limite cadastrado"],
+              ["goals", "Conquistas de metas", "Avisos quando uma meta for alcançada"],
+              ["summary", "Resumo financeiro do mês", "Entradas e despesas registradas no período"],
+            ] as const).map(([key, label, description]) => (
+              <div key={key} className="flex items-center justify-between gap-4">
+                <div className="space-y-1"><Label htmlFor={`notice-${key}`}>{label}</Label><p className="text-xs text-muted-foreground">{description}</p></div>
+                <Switch id={`notice-${key}`} checked={preferences[key]} disabled={savingPreference} onCheckedChange={(checked) => savePreference(key, checked)} />
+              </div>
+            ))}
+            <p className="text-xs text-muted-foreground">Avisos dentro do app, sem envio de e-mail ou WhatsApp nesta etapa. As preferências ficam salvas na sua conta.</p>
           </Section>
 
           <Section
@@ -135,11 +215,11 @@ function ConfiguracoesPage() {
             desc="Importe ou exporte suas informações"
           >
             <div className="flex flex-wrap gap-2">
-              <Button variant="outline" className="gap-2">
-                <Download className="h-4 w-4" /> Exportar dados
+              <Button variant="outline" className="gap-2" disabled title="Em breve">
+                <Download className="h-4 w-4" /> Exportar dados (em breve)
               </Button>
-              <Button variant="outline" className="gap-2">
-                <Upload className="h-4 w-4" /> Importar dados
+              <Button variant="outline" className="gap-2" disabled title="Em breve">
+                <Upload className="h-4 w-4" /> Importar dados (em breve)
               </Button>
             </div>
           </Section>
@@ -150,14 +230,18 @@ function ConfiguracoesPage() {
             desc="Altere sua senha"
           >
             <div className="grid gap-2">
-              <Label>Senha atual</Label>
-              <Input type="password" placeholder="••••••••" />
+              <Label htmlFor="current-password">Senha atual</Label>
+              <Input id="current-password" type="password" autoComplete="current-password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} placeholder="Sua senha atual" />
             </div>
             <div className="grid gap-2">
-              <Label>Nova senha</Label>
-              <Input type="password" placeholder="••••••••" />
+              <Label htmlFor="new-password">Nova senha</Label>
+              <Input id="new-password" type="password" autoComplete="new-password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Mínimo de 8 caracteres" />
             </div>
-            <Button className="w-full sm:w-auto">Salvar alterações</Button>
+            <div className="grid gap-2">
+              <Label htmlFor="confirm-password">Confirmar nova senha</Label>
+              <Input id="confirm-password" type="password" autoComplete="new-password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Repita a nova senha" />
+            </div>
+            <Button className="w-full sm:w-auto" disabled={savingPassword} onClick={changePassword}>{savingPassword && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{savingPassword ? "Alterando..." : "Alterar senha"}</Button>
           </Section>
         </div>
       </main>
