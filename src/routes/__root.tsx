@@ -154,20 +154,61 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [authSlow, setAuthSlow] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setLoading(false);
-    });
+    let mounted = true;
+    const timeoutId = window.setTimeout(() => {
+      if (mounted) setAuthSlow(true);
+    }, 12000);
+
+    void supabase.auth.getSession()
+      .then(({ data: { session }, error }) => {
+        if (!mounted) return;
+        if (error) {
+          console.error("Falha ao consultar sessão:", error.message);
+          setAuthSlow(true);
+          return;
+        }
+        setSession(session);
+        setLoading(false);
+      })
+      .catch((error) => {
+        if (mounted) {
+          console.error("Falha ao iniciar autenticação:", error);
+          setAuthSlow(true);
+        }
+      });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!mounted) return;
       setSession(session);
       setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      window.clearTimeout(timeoutId);
+      subscription.unsubscribe();
+    };
   }, []);
+
+  if (loading && authSlow) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background px-5">
+        <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-6 text-center">
+          <h1 className="text-lg font-semibold">Não conseguimos carregar sua sessão</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            A conexão está demorando mais que o normal. Seus lançamentos continuam armazenados na sua conta.
+          </p>
+          <button type="button" onClick={() => window.location.reload()}
+            className="mt-5 rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground">
+            Tentar novamente
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
