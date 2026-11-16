@@ -74,11 +74,14 @@ export interface Category {
 }
 
 async function getUserId() {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("Usuário não autenticado");
-  return user.id;
+  // Reutiliza a sessão local em vez de realizar uma chamada auth.getUser
+  // para cada tabela em paralelo. O Supabase continua validando o JWT
+  // e aplicando as políticas RLS em todas as consultas.
+  const { data: { session }, error } = await supabase.auth.getSession();
+  if (error || !session?.user) {
+    throw error || new Error("Sua sessão expirou. Entre novamente para consultar seus dados.");
+  }
+  return session.user.id;
 }
 
 export function useMovements() {
