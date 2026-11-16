@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { AppHeader } from "@/components/app-header";
 import { NewMovementFab } from "@/components/new-movement-fab";
 import { useValueVisibility } from "@/lib/value-visibility";
@@ -21,38 +21,10 @@ export const Route = createFileRoute("/")({
 function DashboardPage() {
   const { hidden, toggle, format } = useValueVisibility();
   const navigate = useNavigate();
-  const movementsQuery = useMovements();
-  const goalsQuery = useGoals();
-  const cardsQuery = useCreditCards();
-  const budgetsQuery = useCategoryBudgets();
-  const movements = movementsQuery.data ?? [];
-  const goals = goalsQuery.data ?? [];
-  const cards = cardsQuery.data ?? [];
-  const categoryBudgets = budgetsQuery.data ?? [];
-  const [loadingTooLong, setLoadingTooLong] = useState(false);
-  const isLoadingFinancialData = movementsQuery.isPending || goalsQuery.isPending || budgetsQuery.isPending;
-  const failedQueries = [
-    { label: "movimentações", query: movementsQuery },
-    { label: "metas", query: goalsQuery },
-    { label: "limites por categoria", query: budgetsQuery },
-    { label: "cartões", query: cardsQuery },
-  ].filter(({ query }) => query.isError);
-
-  useEffect(() => {
-    if (!isLoadingFinancialData) {
-      setLoadingTooLong(false);
-      return;
-    }
-    const timer = window.setTimeout(() => setLoadingTooLong(true), 9000);
-    return () => window.clearTimeout(timer);
-  }, [isLoadingFinancialData]);
-
-  const retryFinancialData = () => {
-    void movementsQuery.refetch();
-    void goalsQuery.refetch();
-    void budgetsQuery.refetch();
-    void cardsQuery.refetch();
-  };
+  const { data: movements = [], isLoading: loadingMovements } = useMovements();
+  const { data: goals = [], isLoading: loadingGoals } = useGoals();
+  const { data: cards = [] } = useCreditCards();
+  const { data: categoryBudgets = [], isLoading: loadingBudgets } = useCategoryBudgets();
 
   const summary = useMemo(() => {
     const now = new Date();
@@ -140,7 +112,7 @@ function DashboardPage() {
   }[status];
   const HealthIcon = health.icon;
 
-  if (isLoadingFinancialData && !loadingTooLong && failedQueries.length === 0) {
+  if (loadingMovements || loadingGoals || loadingBudgets) {
     return (
       <div className="min-h-screen">
         <AppHeader greeting />
@@ -160,19 +132,6 @@ function DashboardPage() {
     <div className="min-h-screen">
       <AppHeader greeting />
       <main className="app-page space-y-6 md:space-y-8">
-        {(loadingTooLong || failedQueries.length > 0) && (
-          <div role="status" className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-warning/40 bg-warning/10 p-4">
-            <div>
-              <p className="text-sm font-semibold">{failedQueries.length > 0 ? "Algumas informações não carregaram" : "O carregamento está demorando mais que o normal"}</p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                {failedQueries.length > 0
-                  ? "Não foi possível consultar: " + failedQueries.map((item) => item.label).join(", ") + ". Os valores ainda não carregados não devem ser considerados zerados."
-                  : "A conexão com seus dados ainda está em andamento. Os valores incompletos não devem ser considerados zerados."}
-              </p>
-            </div>
-            <Button size="sm" variant="outline" onClick={retryFinancialData}>Tentar novamente</Button>
-          </div>
-        )}
         <section className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
           <div>
             <p className="section-eyebrow">SEU PAINEL · {monthLabel}</p>
