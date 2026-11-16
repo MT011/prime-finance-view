@@ -107,14 +107,16 @@ export function useAddMovement() {
         | Omit<Movement, "id" | "user_id" | "created_at">[],
     ) => {
       const items = Array.isArray(movement) ? movement : [movement];
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) throw new Error("Usuário não autenticado");
+      // getSession uses the cached session when valid, avoiding an extra getUser
+      // network request on every mobile save. Supabase RLS still enforces auth.uid().
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session?.user) {
+        throw sessionError || new Error("Sua sessão expirou. Entre novamente para salvar.");
+      }
 
       const payloads = items.map((m) => ({
         ...m,
-        user_id: user.id,
+        user_id: session.user.id,
         ...(m.type === "despesa" && m.nature ? { nature: m.nature } : {}),
         ...(m.type === "despesa" && m.expense_type ? { expense_type: m.expense_type } : {}),
         ...(m.card_id ? { card_id: m.card_id } : {}),
@@ -124,9 +126,15 @@ export function useAddMovement() {
         ...(m.total_installments ? { total_installments: m.total_installments } : {}),
       }));
 
-      let { data, error } = await supabase.from("movements").insert(payloads).select();
+      // No .select(): returning every inserted row adds avoidable response work.
+      // Never retry on a timeout/connection error: the first insert may have
+      // committed even if its response never reached the phone.
+      let { error } = await supabase.from("movements").insert(payloads);
 
-      if (error) {
+      // Compatibility retry ONLY for a confirmed missing-column schema error,
+      // where the first insert was rejected by PostgreSQL before inserting rows.
+      const missingColumn = error?.code === "42703" || error?.code === "PGRST204";
+      if (error && missingColumn) {
         const fallbackPayloads = payloads.map((p) => {
           const {
             nature,
@@ -134,18 +142,20 @@ export function useAddMovement() {
             installment_group_id,
             installment_number,
             total_installments,
+            recurring_group_id,
             ...rest
           } = p as any;
           return rest;
         });
-        ({ data, error } = await supabase.from("movements").insert(fallbackPayloads).select());
+        ({ error } = await supabase.from("movements").insert(fallbackPayloads));
       }
 
       if (error) throw error;
-      return items.length === 1 && Array.isArray(data) ? data[0] : data;
+      return items;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["movements"] });
+      // Trigger refresh without blocking the save confirmation.
+      void queryClient.invalidateQueries({ queryKey: ["movements"] });
     },
   });
 }
