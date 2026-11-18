@@ -154,20 +154,63 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [sessionSlow, setSessionSlow] = useState(false);
+  const [sessionError, setSessionError] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
+    let active = true;
+    const timer = window.setTimeout(() => {
+      if (active) setSessionSlow(true);
+    }, 10000);
+
+    void supabase.auth.getSession()
+      .then(({ data, error }) => {
+        if (!active) return;
+        if (error) {
+          console.error("Não foi possível iniciar a sessão.");
+          setSessionError(true);
+          return;
+        }
+        setSession(data.session);
+        setLoading(false);
+      })
+      .catch(() => {
+        if (active) {
+          console.error("Falha na inicialização da autenticação.");
+          setSessionError(true);
+        }
+      });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      if (!active) return;
+      setSession(nextSession);
       setLoading(false);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+      subscription.unsubscribe();
+    };
   }, []);
+
+  if (loading && (sessionSlow || sessionError)) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-background px-5">
+        <section role="status" className="w-full max-w-sm rounded-2xl border border-border bg-card p-6 text-center">
+          <h1 className="text-lg font-semibold">Não conseguimos iniciar sua sessão</h1>
+          <p className="mt-3 text-sm text-muted-foreground">
+            A autenticação está demorando ou encontrou um erro. Tente recarregar a página; não é necessário limpar o cache.
+          </p>
+          <p className="mt-2 text-xs text-muted-foreground">Etapa: autenticação</p>
+          <button type="button" onClick={() => window.location.reload()}
+            className="mt-5 rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground">
+            Tentar novamente
+          </button>
+        </section>
+      </main>
+    );
+  }
 
   if (loading) {
     return (
