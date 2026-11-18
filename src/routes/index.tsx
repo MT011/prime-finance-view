@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AppHeader } from "@/components/app-header";
 import { NewMovementFab } from "@/components/new-movement-fab";
 import { useValueVisibility } from "@/lib/value-visibility";
@@ -21,10 +21,41 @@ export const Route = createFileRoute("/")({
 function DashboardPage() {
   const { hidden, toggle, format } = useValueVisibility();
   const navigate = useNavigate();
-  const { data: movements = [], isLoading: loadingMovements } = useMovements();
-  const { data: goals = [], isLoading: loadingGoals } = useGoals();
-  const { data: cards = [] } = useCreditCards();
-  const { data: categoryBudgets = [], isLoading: loadingBudgets } = useCategoryBudgets();
+  const movementsQuery = useMovements();
+  const goalsQuery = useGoals();
+  const cardsQuery = useCreditCards();
+  const budgetsQuery = useCategoryBudgets();
+  const movements = movementsQuery.data ?? [];
+  const goals = goalsQuery.data ?? [];
+  const cards = cardsQuery.data ?? [];
+  const categoryBudgets = budgetsQuery.data ?? [];
+
+  // O dashboard nunca deve mostrar valores zerados quando uma consulta falhou.
+  const requiredQueries = [
+    { label: "Movimentações", query: movementsQuery },
+    { label: "Metas", query: goalsQuery },
+    { label: "Cartões", query: cardsQuery },
+    { label: "Limites por categoria", query: budgetsQuery },
+  ];
+  const missingData = requiredQueries.some(({ query }) => query.data === undefined);
+  const queryFailure = requiredQueries.some(({ query }) => query.isError);
+  const [slowLoading, setSlowLoading] = useState(false);
+
+  useEffect(() => {
+    if (!missingData && !queryFailure) {
+      setSlowLoading(false);
+      return;
+    }
+    const timer = window.setTimeout(() => setSlowLoading(true), 10000);
+    return () => window.clearTimeout(timer);
+  }, [missingData, queryFailure]);
+
+  const retryLoading = () => {
+    void movementsQuery.refetch();
+    void goalsQuery.refetch();
+    void cardsQuery.refetch();
+    void budgetsQuery.refetch();
+  };
 
   const summary = useMemo(() => {
     const now = new Date();
@@ -112,17 +143,42 @@ function DashboardPage() {
   }[status];
   const HealthIcon = health.icon;
 
-  if (loadingMovements || loadingGoals || loadingBudgets) {
+  if (missingData || queryFailure) {
     return (
       <div className="min-h-screen">
         <AppHeader greeting />
         <div className="app-page space-y-5">
           <div className="h-16 w-2/3 animate-pulse rounded-2xl bg-muted" />
-          <div className="h-64 animate-pulse rounded-[30px] bg-muted" />
-          <div className="grid grid-cols-2 gap-4">
-            <div className="h-44 animate-pulse rounded-[24px] bg-muted" />
-            <div className="h-44 animate-pulse rounded-[24px] bg-muted" />
-          </div>
+          <div className="h-44 animate-pulse rounded-[30px] bg-muted" />
+          {(slowLoading || queryFailure) && (
+            <section role="status" className="mx-auto max-w-xl rounded-2xl border border-border bg-card p-5">
+              <h2 className="text-lg font-semibold">
+                {queryFailure ? "Não conseguimos carregar todos os dados" : "A conexão está demorando mais que o normal"}
+              </h2>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Seus dados não serão exibidos como zerados enquanto a consulta não terminar. Você pode tentar novamente sem limpar o cache.
+              </p>
+              <div className="mt-4 space-y-2" aria-label="Diagnóstico do carregamento">
+                {requiredQueries.map(({ label, query }) => (
+                  <div key={label} className="flex items-center justify-between gap-3 rounded-lg bg-muted/50 px-3 py-2 text-xs">
+                    <span>{label}</span>
+                    <span className="font-semibold">
+                      {query.isError ? "Falhou" : query.data !== undefined ? "Carregado" : "Aguardando"}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Button onClick={retryLoading} variant="outline" disabled={requiredQueries.some(({ query }) => query.isFetching)}>
+                  {requiredQueries.some(({ query }) => query.isFetching) ? "Consultando..." : "Tentar novamente"}
+                </Button>
+                <Button variant="ghost" onClick={() => window.location.reload()}>Recarregar página</Button>
+              </div>
+              <p className="mt-3 text-xs text-muted-foreground">
+                Se continuar travando, nos informe quais itens aparecem como “Aguardando” ou “Falhou”. Nenhum dado financeiro é enviado neste diagnóstico.
+              </p>
+            </section>
+          )}
         </div>
       </div>
     );
