@@ -7,7 +7,7 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -154,20 +154,37 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const currentUserId = useRef<string | null | undefined>(undefined);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    let mounted = true;
+    void supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!mounted || currentUserId.current !== undefined) return;
+      currentUserId.current = session?.user?.id ?? null;
       setSession(session);
+      setLoading(false);
+    }).catch((error) => {
+      // Nunca interpretar falha de leitura da sessão como conta vazia.
+      console.error("Não foi possível recuperar a sessão:", error);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      if (!mounted) return;
+      const nextId = nextSession?.user?.id ?? null;
+      if (currentUserId.current !== undefined && currentUserId.current !== nextId) {
+        // Impede que dados de uma conta anterior apareçam após trocar de usuário.
+        queryClient.clear();
+      }
+      currentUserId.current = nextId;
+      setSession(nextSession);
       setLoading(false);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, [queryClient]);
 
   if (loading) {
     return (
