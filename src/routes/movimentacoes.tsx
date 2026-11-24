@@ -138,7 +138,7 @@ function renderMovementTable(
             </div>
             <div className="mt-3 flex items-center justify-between gap-2 border-t border-border/70 pt-3">
               <div className="min-w-0 text-[11px] text-muted-foreground">
-                <span className="font-semibold text-foreground">{m.type === "receita" ? "Receita" : m.nature === "credito" ? "Crédito" : m.nature === "debito" ? "Débito" : m.nature === "pix" ? "PIX" : "Despesa"}</span>
+                <span className={`font-semibold ${m.type === "receita" ? "text-success" : "text-foreground"}`}>{m.type === "receita" ? "Receita" : m.nature === "credito" ? "Crédito" : m.nature === "debito" ? "Débito" : m.nature === "pix" ? "PIX" : "Despesa"}</span>
                 {m.account && <span className="ml-2">· {m.account}</span>}
                 {m.total_installments > 1 && <span className="ml-2">· {m.installment_number}/{m.total_installments} parcelas</span>}
               </div>
@@ -238,7 +238,7 @@ function renderMovementTable(
               <span
                 className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
                   m.type === "receita"
-                    ? "bg-primary/15 text-primary"
+                    ? "bg-success/15 text-success"
                     : "bg-destructive/15 text-destructive"
                 }`}
               >
@@ -255,7 +255,7 @@ function renderMovementTable(
             </TableCell>
             <TableCell
               className={`text-right font-semibold ${
-                m.type === "receita" ? "text-primary" : "text-destructive"
+                m.type === "receita" ? "text-success" : "text-destructive"
               }`}
             >
               {m.type === "receita" ? "+" : "-"} {format(m.amount)}
