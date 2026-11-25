@@ -43,7 +43,8 @@ export function AppSidebar() {
   const [moreOpen, setMoreOpen] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => setUser(user));
+    // Reutiliza a sessão local para exibir o perfil sem nova chamada auth.getUser().
+    void supabase.auth.getSession().then(({ data: { session } }) => setUser(session?.user || null));
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => setUser(session?.user || null));
     return () => subscription.unsubscribe();
   }, []);
